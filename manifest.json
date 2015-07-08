@@ -1,0 +1,33 @@
+{
+    "update_url": "https://clients2.google.com/service/update2/crx",
+
+    "manifest_version": 2,
+
+    "name": "Suspend HTML5 Media",
+    "short_name": "SuspendMedia",
+    "description": "An extension that provides more control over HTML5 audio and video.",
+    "version": "0.1",
+    "author": "Eloston",
+    "homepage_url": "https://github.com/Eloston/suspend-html5-media/",
+    "icons": {"16": "images/icon_16.png", "48": "images/icon_48.png", "128": "images/icon_128.png"},
+
+    "background": {
+        "scripts": [ "background.js" ],
+        "persistent": false
+    },
+    "content_scripts": [
+        {
+            "matches": ["<all_urls>"],
+            "js": ["page_code.js"],
+            "all_frames": true
+        }
+    ],
+    "page_action": {
+        "default_icon": {
+            "19": "images/resume_19.png",
+            "38": "images/resume_38.png"
+        }
+    },
+
+    "permissions": [ "tabs" ]
+}
