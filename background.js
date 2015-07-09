@@ -1,40 +1,39 @@
-function update_pageaction(response) {
-    if (response.suspended == true) {
-        chrome.pageAction.setIcon({ tabId: response.tabid, path: { "19": "images/resume_19.png", "38": "images/resume_38.png" } });
-        chrome.pageAction.setTitle({ tabId: response.tabid, title: "Resume HTML5 media" });
+function update_pageaction_icon(tabid, suspended) {
+    if (suspended == true) {
+        chrome.pageAction.setIcon({ tabId: tabid, path: { "19": "images/resume_19.png", "38": "images/resume_38.png" } });
+        chrome.pageAction.setTitle({ tabId: tabid, title: "Resume HTML5 media" });
         return;
-    } else if (response.suspended == false) {
-        chrome.pageAction.setIcon({ tabId: response.tabid, path: { "19": "images/suspend_19.png", "38": "images/resume_38.png" } });
-        chrome.pageAction.setTitle({ tabId: response.tabid, title: "Suspend HTML5 media" });
+    } else if (suspended == false) {
+        chrome.pageAction.setIcon({ tabId: tabid, path: { "19": "images/suspend_19.png", "38": "images/resume_38.png" } });
+        chrome.pageAction.setTitle({ tabId: tabid, title: "Suspend HTML5 media" });
         return;
     } else {
-        console.error("background.js: Invalid suspended value: " + response.suspended);
+        console.error("background.js: update_pageaction_icon: Invalid suspended value: " + suspended);
     };
 };
 
-function show_pageaction(tabid) {
-    chrome.pageAction.show(tabid);
-};
-
-function hide_pageaction(tabid) {
-    chrome.pageAction.hide(tabid);
+function update_pageaction_visibility(tabid, visible) {
+    if (visible == true) {
+        chrome.pageAction.show(tabid);
+    } else if (visible == false) {
+        chrome.pageAction.hide(tabid);
+    } else {
+        console.error("background.js: update_pageaction_visibility: Unknown visible value: " + visible);
+    };
 };
 
 function handle_contentscript_message(message, sender, sendResponse) {
-    if (message.action == "page_created") {
-        chrome.pageAction.show(sender.tab.id);
-        update_pageaction({tabid: sender.tab.id, suspended: message.suspended});
-    } else if (message.action == "show_pageaction") {
-        show_pageaction(sender.tab.id);
-    } else if (message.action == "hide_pageaction") {
-        hide_pageaction(sender.tab.id);
+    if (message.action == "update_pageaction_icon") {
+        update_pageaction_icon(sender.tab.id, message.suspended);
+    } else if (message.action == "update_pageaction_visibility") {
+        update_pageaction_visibility(sender.tab.id, message.visible);
     } else {
-        console.error("background.js: Unknown message received: " + message);
+        console.error("background.js: handle_contentscript_message: Unknown message received: " + message);
     };
 };
 
 chrome.pageAction.onClicked.addListener(function(tab) {
-    chrome.tabs.sendMessage(tab.id, ["pageaction_clicked", tab.id], {}, update_pageaction);
+    chrome.tabs.sendMessage(tab.id, {action: "click_pageaction"});
 });
 
 chrome.runtime.onMessage.addListener(handle_contentscript_message);
