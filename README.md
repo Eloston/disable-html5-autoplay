@@ -5,6 +5,7 @@ This extension creates an icon in the address bar. It has two states:<br />
 - ![A green play button icon](https://github.com/Eloston/suspend-html5-media/raw/master/images/resume_19.png "A green play button icon"): All HTML5 media is "suspended"; that is, they will pause and cannot play. Click this icon to "resume" all media.
 - ![A yellow pause button icon](https://github.com/Eloston/suspend-html5-media/raw/master/images/suspend_19.png "A yellow pause button icon"): All HTML5 media are in their original, untouched state. Click this icon to "suspend" all media.
 <br />
+<br />
 The extension will suspend all media elements on page load
 
 ## Installation
@@ -15,9 +16,7 @@ The extension will suspend all media elements on page load
 
 ## TODO
 
-- Clean up the code, make it more efficient
-- Add site-specific exceptions
 - Add per-element exceptions or filtering(?)
-- Add option to resume autoplaying media on resumption
+- Add option to resume autoplaying media on resumption(?)
 - Add statistics for functions called during suspension(?)
 
