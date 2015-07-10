@@ -7,11 +7,11 @@ function chrome_api_callback() {
 function update_pageaction_icon(tabid, suspended) {
     if (suspended == true) {
         chrome.pageAction.setIcon({ tabId: tabid, path: { "19": "images/resume_19.png", "38": "images/resume_38.png" } }, chrome_api_callback);
-        chrome.pageAction.setTitle({ tabId: tabid, title: "Resume HTML5 media" });
+        chrome.pageAction.setTitle({ tabId: tabid, title: "Resume HTML5 Media" });
         return;
     } else if (suspended == false) {
         chrome.pageAction.setIcon({ tabId: tabid, path: { "19": "images/suspend_19.png", "38": "images/resume_38.png" } }, chrome_api_callback);
-        chrome.pageAction.setTitle({ tabId: tabid, title: "Suspend HTML5 media" });
+        chrome.pageAction.setTitle({ tabId: tabid, title: "Suspend HTML5 Media" });
         return;
     } else {
         console.error("background.js: update_pageaction_icon: Invalid suspended value: " + JSON.stringify(suspended));
