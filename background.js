@@ -1,14 +1,20 @@
+function chrome_api_callback() {
+    if (chrome.runtime.lastError) {
+        console.log("background.js: chrome.runtime.lastError: " + chrome.runtime.lastError.message);
+    };
+};
+
 function update_pageaction_icon(tabid, suspended) {
     if (suspended == true) {
-        chrome.pageAction.setIcon({ tabId: tabid, path: { "19": "images/resume_19.png", "38": "images/resume_38.png" } });
+        chrome.pageAction.setIcon({ tabId: tabid, path: { "19": "images/resume_19.png", "38": "images/resume_38.png" } }, chrome_api_callback);
         chrome.pageAction.setTitle({ tabId: tabid, title: "Resume HTML5 media" });
         return;
     } else if (suspended == false) {
-        chrome.pageAction.setIcon({ tabId: tabid, path: { "19": "images/suspend_19.png", "38": "images/resume_38.png" } });
+        chrome.pageAction.setIcon({ tabId: tabid, path: { "19": "images/suspend_19.png", "38": "images/resume_38.png" } }, chrome_api_callback);
         chrome.pageAction.setTitle({ tabId: tabid, title: "Suspend HTML5 media" });
         return;
     } else {
-        console.error("background.js: update_pageaction_icon: Invalid suspended value: " + suspended);
+        console.error("background.js: update_pageaction_icon: Invalid suspended value: " + JSON.stringify(suspended));
     };
 };
 
@@ -18,7 +24,7 @@ function update_pageaction_visibility(tabid, visible) {
     } else if (visible == false) {
         chrome.pageAction.hide(tabid);
     } else {
-        console.error("background.js: update_pageaction_visibility: Unknown visible value: " + visible);
+        console.error("background.js: update_pageaction_visibility: Unknown visible value: " + JSON.stringify(visible));
     };
 };
 
@@ -28,7 +34,7 @@ function handle_contentscript_message(message, sender, sendResponse) {
     } else if (message.action == "update_pageaction_visibility") {
         update_pageaction_visibility(sender.tab.id, message.visible);
     } else {
-        console.error("background.js: handle_contentscript_message: Unknown message received: " + message);
+        console.error("background.js: handle_contentscript_message: Unknown message received: " + JSON.stringify(message));
     };
 };
 
