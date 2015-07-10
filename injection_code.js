@@ -1,12 +1,12 @@
-var suspend_html5_media_injection_code_instance = new function() {
+new function() {
     var self = this;
 
     function send_message(message) {
-        setTimeout(document.dispatchEvent(new CustomEvent("SuspendHTML5MediaEvent_ToContentScript", { detail: message })), 0);
+        document.dispatchEvent(new CustomEvent("DisableHTML5AutoplayEvent_ToContentScript", { detail: message }))
     };
 
     function add_message_listener(callback_function) {
-        document.addEventListener("SuspendHTML5MediaEvent_ToInjectedScript", function(customEventInit) { callback_function(customEventInit.detail); });
+        document.addEventListener("DisableHTML5AutoplayEvent_ToInjectedScript", function(customEventInit) { callback_function(customEventInit.detail); });
     };
 
     function get_all_media_elements() {
@@ -79,7 +79,6 @@ var suspend_html5_media_injection_code_instance = new function() {
     }; 
 
     function suspended_call(name) {
-        console.log("injection_code.js: " + name + "() was called during suspension.");
     };
 
     ATTRIBUTE_REPLACEMENT = [

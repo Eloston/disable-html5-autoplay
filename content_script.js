@@ -1,9 +1,9 @@
-document.addEventListener("SuspendHTML5MediaEvent_ToContentScript", function(message) {
+document.addEventListener("DisableHTML5AutoplayEvent_ToContentScript", function(message) {
     chrome.runtime.sendMessage(message.detail);
 });
 
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-    setTimeout(document.dispatchEvent(new CustomEvent("SuspendHTML5MediaEvent_ToInjectedScript", { detail: message })), 0);
+    document.dispatchEvent(new CustomEvent("DisableHTML5AutoplayEvent_ToInjectedScript", { detail: message }))
 });
 
 injection_script_element = document.createElement("script");
