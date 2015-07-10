@@ -18,9 +18,12 @@
     "content_scripts": [
         {
             "matches": ["<all_urls>"],
-            "js": ["page_code.js"],
+            "js": ["content_script.js"],
             "all_frames": true
         }
+    ],
+    "web_accessible_resources": [
+        "injection_code.js"
     ],
     "page_action": {
         "default_icon": {
