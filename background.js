@@ -6,46 +6,43 @@ function chrome_api_callback() {
     };
 };
 
-function update_pageaction_icon(tabid, suspended) {
+function update_pageaction_icon(tabId, suspended) {
     if (suspended == true) {
-        chrome.pageAction.setIcon({ tabId: tabid, path: { "19": "images/resume_19.png", "38": "images/resume_38.png" } }, chrome_api_callback);
-        chrome.pageAction.setTitle({ tabId: tabid, title: "Resume HTML5 Media" });
+        chrome.pageAction.setIcon({ tabId: tabId, path: { "19": "images/resume_19.png", "38": "images/resume_38.png" } }, chrome_api_callback);
+        chrome.pageAction.setTitle({ tabId: tabId, title: "Resume HTML5 Media" });
         return;
     } else if (suspended == false) {
-        chrome.pageAction.setIcon({ tabId: tabid, path: { "19": "images/suspend_19.png", "38": "images/resume_38.png" } }, chrome_api_callback);
-        chrome.pageAction.setTitle({ tabId: tabid, title: "Suspend HTML5 Media" });
+        chrome.pageAction.setIcon({ tabId: tabId, path: { "19": "images/suspend_19.png", "38": "images/resume_38.png" } }, chrome_api_callback);
+        chrome.pageAction.setTitle({ tabId: tabId, title: "Suspend HTML5 Media" });
         return;
     } else {
         console.error("background.js: update_pageaction_icon: Invalid suspended value: " + JSON.stringify(suspended));
     };
 };
 
-function update_pageaction_visibility(tabid, visible) {
+function update_pageaction_visibility(tabId, visible) {
     if (visible == true) {
-        chrome.pageAction.show(tabid);
+        chrome.pageAction.show(tabId);
     } else if (visible == false) {
-        chrome.pageAction.hide(tabid);
+        chrome.pageAction.hide(tabId);
     } else {
         console.error("background.js: update_pageaction_visibility: Unknown visible value: " + JSON.stringify(visible));
     };
 };
 
+function initialize_tab_state(tabId) {
+    g_tab_states.set(tabId, {
+        suspended: true,
+        frames_with_media: new Set()
+    });
+    update_pageaction_icon(tabId, g_tab_states.get(tabId).suspended);
+};
+
 function handle_contentscript_message(message, sender, sendResponse) {
     if (message.action == "add_page") {
-        if (sender.frameId == 0) {
-            if (g_tab_states.has(sender.tab.id)) {
-                g_tab_states.delete(sender.tab.id);
-            };
-            g_tab_states.set(sender.tab.id, {
-                suspended: true,
-                frames_with_media: new Set()
-            });
-            update_pageaction_icon(sender.tab.id, g_tab_states.get(sender.tab.id).suspended);
-        } else {
-            if (!g_tab_states.has(sender.tab.id)) {
-                console.error("background.js: handle_contentscript_message - add_page: Tried to add frame, but tab was not registered in g_tab_states");
-                return false;
-            };
+        if (!g_tab_states.has(sender.tab.id)) {
+            console.error("background.js: handle_contentscript_message - add_page: Tab is not registered: " + sender.tab.id.toString());
+            return false;
         };
         sendResponse(g_tab_states.get(sender.tab.id).suspended);
     } else if (message.action == "page_has_media") {
@@ -84,3 +81,24 @@ chrome.pageAction.onClicked.addListener(function(tab) {
 });
 
 chrome.runtime.onMessage.addListener(handle_contentscript_message);
+
+chrome.tabs.onCreated.addListener(function(tab) {
+    initialize_tab_state(tab.id);
+});
+
+chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+    if (changeInfo.hasOwnProperty("url")) {
+        g_tab_states.delete(tabId);
+        initialize_tab_state(tabId);
+    };
+});
+
+chrome.tabs.onRemoved.addListener(function(tabId, removeInfo) {
+    g_tab_states.delete(tabId);
+});
+
+chrome.tabs.onReplaced.addListener(function(addedTabId, removedTabId) {
+    g_tab_states.set(addedTabId, g_tab_states.get(removedTabId));
+    g_tab_states.remove(removedTabId);
+});
+
