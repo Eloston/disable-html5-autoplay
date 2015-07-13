@@ -1,14 +1,115 @@
-document.addEventListener("DisableHTML5AutoplayEvent_ToContentScript", function(message) {
+g_window_script = function(suspended) {
+    var self = this;
+
+    function send_message(message) {
+        window.dispatchEvent(new CustomEvent("DisableHTML5AutoplayEvent_ToContentScript", { detail: message }));
+    };
+
+    function add_message_listener(callback_function) {
+        window.addEventListener("DisableHTML5AutoplayEvent_ToWindowScript", function(customEventInit) { callback_function(customEventInit.detail); });
+    };
+
+    function get_all_media_elements() {
+        return Array.prototype.slice.call(document.querySelectorAll("audio, video"));
+    };
+
+    function update_has_media(has_media) {
+        if (!(has_media == self.m_has_media)) {
+            send_message({action: "page_has_media", has_media: has_media});
+            self.m_has_media = has_media;
+        };
+    };
+
+    function page_update(suspend, media_elements) {
+        for (element of media_elements) {
+            for (replacement of ATTRIBUTE_REPLACEMENT) {
+                var disabled_equivalent = "disabled_" + replacement.attribute;
+                if (suspend == true) {
+                    element.pause();
+                    if (!(disabled_equivalent in element)) {
+                        element[disabled_equivalent] = element[replacement.attribute];
+                        if (replacement.stub_type == "function") {
+                            element[replacement.attribute] = function() { replacement.stub_value(replacement.attribute); };
+                        } else if (replacement.stub_type == "value") {
+                            element[replacement.attribute] = replacement.stub_value;
+                        } else {
+                            console.error("window_script.js: page_update: Unknown value for replacement.stub_type: " + JSON.stringify(replacement.stub_type));
+                        };
+                    };
+                } else if (suspend == false) {
+                    if (disabled_equivalent in element) {
+                        element[replacement.attribute] = element[disabled_equivalent];
+                        delete element[disabled_equivalent];
+                    };
+                } else {
+                    console.error("window_script.js: page_update: Unknown value for suspend: " + JSON.stringify(suspend));
+                };
+            };
+        };
+    };
+
+    function handle_backgroundscript_message(message) {
+        if (message.action == "update_suspended_state") {
+            self.m_suspended = message.suspended;
+            page_update(self.m_suspended, get_all_media_elements());
+        } else {
+            console.error("window_script.js: handle_backgroundscript_message: Unknown message received: " + JSON.stringify(message));
+        };
+    };
+
+    function suspended_call(name) {
+    };
+
+    ATTRIBUTE_REPLACEMENT = [
+        {attribute: "play", stub_type: "function", stub_value: suspended_call},
+        {attribute: "oncanplay", stub_type: "function", stub_value: suspended_call},
+        {attribute: "onplay", stub_type: "function", stub_value: suspended_call}
+    ];
+    self.m_suspended = suspended;
+    self.m_has_media = false;
+    var mutation_observer_callback = function(mutations_array) {
+        update_has_media(get_all_media_elements().length > 0);
+        var media_elements = new Array();
+        for (mutation of mutations_array) {
+            if (mutation.target.nodeType == 1) { // ELEMENT_NODE
+                if (mutation.target instanceof HTMLMediaElement) {
+                    media_elements.push(mutation.target);
+                };
+            };
+        };
+        page_update(self.m_suspended, media_elements);
+    }
+    self.m_mutation_observer = new MutationObserver(mutation_observer_callback);
+
+    var all_media_elements = get_all_media_elements();
+    update_has_media(all_media_elements.length > 0);
+    page_update(self.m_suspended, all_media_elements);
+
+    self.m_mutation_observer.observe(document, {
+        childList: true,
+        attributes: true,
+        characterData: true,
+        subtree: true
+    });
+
+    add_message_listener(handle_backgroundscript_message);
+};
+
+function initialize_window_script(suspended) {
+    var window_script_element = document.createElement("script");
+    window_script_element.textContent = "new (" + g_window_script.toString() + ")(" + suspended.toString() + ");";
+    window_script_element.onload = function() {
+        this.parentNode.removeChild(window_script_element);
+    };
+    (document.head||document.documentElement).appendChild(window_script_element);
+};
+
+window.addEventListener("DisableHTML5AutoplayEvent_ToContentScript", function(message) {
     chrome.runtime.sendMessage(message.detail);
 });
 
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-    document.dispatchEvent(new CustomEvent("DisableHTML5AutoplayEvent_ToInjectedScript", { detail: message }))
+    window.dispatchEvent(new CustomEvent("DisableHTML5AutoplayEvent_ToWindowScript", { detail: message }));
 });
 
-injection_script_element = document.createElement("script");
-injection_script_element.src = chrome.extension.getURL("injection_code.js");
-(document.head||document.documentElement).appendChild(injection_script_element);
-injection_script_element.onload = function() {
-    this.parentNode.removeChild(injection_script_element);
-};
+chrome.runtime.sendMessage({action: "add_page"}, initialize_window_script);
