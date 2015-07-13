@@ -9,11 +9,15 @@
     "version": "0.1",
     "author": "Eloston",
     "homepage_url": "https://github.com/Eloston/disable-html5-autoplay/",
-    "icons": {"16": "images/icon_16.png", "48": "images/icon_48.png", "128": "images/icon_128.png"},
+    "icons": {
+        "16": "images/icon_16.png",
+        "48": "images/icon_48.png",
+        "128": "images/icon_128.png"
+    },
 
     "background": {
         "scripts": [ "background.js" ],
-        "persistent": false
+        "persistent": true
     },
     "content_scripts": [
         {
@@ -21,9 +25,6 @@
             "js": ["content_script.js"],
             "all_frames": true
         }
-    ],
-    "web_accessible_resources": [
-        "injection_code.js"
     ],
     "page_action": {
         "default_icon": {
