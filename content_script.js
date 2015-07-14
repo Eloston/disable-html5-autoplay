@@ -20,25 +20,27 @@ g_window_script = function(suspended) {
         };
     };
 
-    function page_update(suspend, media_elements) {
+    function page_update(suspend, media_elements, first_time) {
         for (element of media_elements) {
-            for (replacement of ATTRIBUTE_REPLACEMENT) {
-                var disabled_equivalent = "disabled_" + replacement.attribute;
+            for (replacement of PROPERTY_REPLACEMENT) {
+                var disabled_equivalent = "disabled_" + replacement.property;
                 if (suspend == true) {
-                    element.pause();
+                    if (first_time == true) {
+                        element.pause();
+                    };
                     if (!(disabled_equivalent in element)) {
-                        element[disabled_equivalent] = element[replacement.attribute];
+                        element[disabled_equivalent] = element[replacement.property];
                         if (replacement.stub_type == "function") {
-                            element[replacement.attribute] = function() { replacement.stub_value(replacement.attribute); };
+                            element[replacement.property] = function() { replacement.stub_value(element); };
                         } else if (replacement.stub_type == "value") {
-                            element[replacement.attribute] = replacement.stub_value;
+                            element[replacement.property] = replacement.stub_value;
                         } else {
                             console.error("window_script.js: page_update: Unknown value for replacement.stub_type: " + JSON.stringify(replacement.stub_type));
                         };
                     };
                 } else if (suspend == false) {
                     if (disabled_equivalent in element) {
-                        element[replacement.attribute] = element[disabled_equivalent];
+                        element[replacement.property] = element[disabled_equivalent];
                         delete element[disabled_equivalent];
                     };
                 } else {
@@ -51,19 +53,14 @@ g_window_script = function(suspended) {
     function handle_backgroundscript_message(message) {
         if (message.action == "update_suspended_state") {
             self.m_suspended = message.suspended;
-            page_update(self.m_suspended, get_all_media_elements());
+            page_update(self.m_suspended, get_all_media_elements(), false);
         } else {
             console.error("window_script.js: handle_backgroundscript_message: Unknown message received: " + JSON.stringify(message));
         };
     };
 
-    function suspended_call(name) {
-    };
-
-    ATTRIBUTE_REPLACEMENT = [
-        {attribute: "play", stub_type: "function", stub_value: suspended_call},
-        {attribute: "oncanplay", stub_type: "function", stub_value: suspended_call},
-        {attribute: "onplay", stub_type: "function", stub_value: suspended_call}
+    PROPERTY_REPLACEMENT = [
+        {property: "play", stub_type: "function", stub_value: function(element) { setTimeout(element.pause(), 0); } }
     ];
     self.m_suspended = suspended;
     self.m_has_media = false;
@@ -77,13 +74,13 @@ g_window_script = function(suspended) {
                 };
             };
         };
-        page_update(self.m_suspended, media_elements);
+        page_update(self.m_suspended, media_elements, false);
     }
     self.m_mutation_observer = new MutationObserver(mutation_observer_callback);
 
     var all_media_elements = get_all_media_elements();
     update_has_media(all_media_elements.length > 0);
-    page_update(self.m_suspended, all_media_elements);
+    page_update(self.m_suspended, all_media_elements, true);
 
     self.m_mutation_observer.observe(document, {
         childList: true,

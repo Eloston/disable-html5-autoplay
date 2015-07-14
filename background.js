@@ -35,10 +35,15 @@ function initialize_tab_state(tabId) {
         suspended: true,
         frames_with_media: new Set()
     });
-    update_pageaction_icon(tabId, g_tab_states.get(tabId).suspended);
+    update_pageaction_icon(tabId, true);
+    update_pageaction_visibility(tabId, false);
 };
 
 function handle_contentscript_message(message, sender, sendResponse) {
+    if (!sender.hasOwnProperty("tab")) {
+        // Page is being unloaded, so ignore these messages
+        return false;
+    };
     if (message.action == "add_page") {
         if (!g_tab_states.has(sender.tab.id)) {
             console.error("background.js: handle_contentscript_message - add_page: Tab is not registered: " + sender.tab.id.toString());
@@ -87,8 +92,7 @@ chrome.tabs.onCreated.addListener(function(tab) {
 });
 
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-    if (changeInfo.hasOwnProperty("url")) {
-        g_tab_states.delete(tabId);
+    if (!g_tab_states.has(tabId)) {
         initialize_tab_state(tabId);
     };
 });
@@ -99,6 +103,17 @@ chrome.tabs.onRemoved.addListener(function(tabId, removeInfo) {
 
 chrome.tabs.onReplaced.addListener(function(addedTabId, removedTabId) {
     g_tab_states.set(addedTabId, g_tab_states.get(removedTabId));
-    g_tab_states.remove(removedTabId);
+    g_tab_states.delete(removedTabId);
+});
+
+chrome.webNavigation.onBeforeNavigate.addListener(function(details) {
+    if (g_tab_states.has(details.tabId)) {
+        if (details.frameId == 0) {
+            g_tab_states.delete(details.tabId);
+            initialize_tab_state(details.tabId);
+        } else {
+            g_tab_states.get(details.tabId).frames_with_media.delete(details.frameId);
+        };
+    };
 });
 
