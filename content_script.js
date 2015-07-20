@@ -1,11 +1,3 @@
-function send_message(message) {
-    chrome.runtime.sendMessage(message);
-};
-
-function add_message_listener(callback_function) {
-    chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) { callback_function(message); });
-};
-
 function get_all_media_elements() {
     return Array.prototype.slice.call(document.querySelectorAll("audio, video"));
 };
@@ -31,15 +23,6 @@ function page_update(suspend, media_elements, first_time) {
                 console.error("window_script.js: page_update: Unknown value for suspend: " + JSON.stringify(suspend));
             };
         };
-    };
-};
-
-function handle_backgroundscript_message(message) {
-    if (message.action == "update_suspended_state") {
-        m_suspended = message.suspended;
-        page_update(m_suspended, get_all_media_elements(), false);
-    } else {
-        console.error("window_script.js: handle_backgroundscript_message: Unknown message received: " + JSON.stringify(message));
     };
 };
 
@@ -76,7 +59,3 @@ var mutation_observer_callback = function(mutations_array) {
     page_update(m_suspended, media_elements, false);
 }
 var m_mutation_observer = new MutationObserver(mutation_observer_callback);
-
-add_message_listener(handle_backgroundscript_message);
-
-chrome.runtime.sendMessage({action: "add_frame"}, frame_initialize);
