@@ -44,15 +44,15 @@ function handle_contentscript_message(message, sender, sendResponse) {
         // Page is being unloaded, so ignore these messages
         return false;
     };
-    if (message.action == "add_page") {
+    if (message.action == "add_frame") {
         if (!g_tab_states.has(sender.tab.id)) {
-            console.error("background.js: handle_contentscript_message - add_page: Tab is not registered: " + sender.tab.id.toString());
+            console.error("background.js: handle_contentscript_message - add_frame: Tab is not registered: " + sender.tab.id.toString());
             return false;
         };
         sendResponse(g_tab_states.get(sender.tab.id).suspended);
-    } else if (message.action == "page_has_media") {
+    } else if (message.action == "frame_has_media") {
         if (!g_tab_states.has(sender.tab.id)) {
-            console.error("background.js: handle_contentscript_message - page_has_media: Tab is not registered: " + sender.tab.id.toString());
+            console.error("background.js: handle_contentscript_message - frame_has_media: Tab is not registered: " + sender.tab.id.toString());
             return false;
         };
         var already_visible = g_tab_states.get(sender.tab.id).frames_with_media.size > 0;
@@ -61,7 +61,7 @@ function handle_contentscript_message(message, sender, sendResponse) {
         } else if (message.has_media == false) {
             g_tab_states.get(sender.tab.id).frames_with_media.delete(sender.frameId);
         } else {
-            console.error("background.js: handle_contentscript_message - page_has_media: Invalid value for message.has_media: " + JSON.stringify(message.has_media));
+            console.error("background.js: handle_contentscript_message - frame_has_media: Invalid value for message.has_media: " + JSON.stringify(message.has_media));
             return false;
         };
         var now_visible = g_tab_states.get(sender.tab.id).frames_with_media.size > 0;
