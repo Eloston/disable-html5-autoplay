@@ -3,4 +3,4 @@ frame_script.src = chrome.extension.getURL("frame_script.js");
 frame_script.onload = function() {
     this.parentNode.removeChild(this);
 };
-document.documentElement.appendChild(frame_script);
+(document.head||document.documentElement).appendChild(frame_script);

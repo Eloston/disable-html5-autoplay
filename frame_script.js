@@ -58,6 +58,40 @@
         };
     };
 
+    function JWPlayerDelegate(element, check_type_matches) {
+        if (check_type_matches == true) {
+            return (element.classList.contains("jw-video") && element.parentElement.classList.contains("jw-media") && element.parentElement.parentElement.classList.contains("jwplayer") && window.hasOwnProperty("jwplayer"));
+        };
+
+        var self = this;
+
+        self.m_element = element;
+
+        var jwinstance = jwplayer(element.parentElement.parentElement);
+
+        if (jwinstance.hasOwnProperty("once") == true) {
+            jwinstance.once("play", function(e) {
+                if (e.oldstate == "buffering") {
+                    setTimeout(function() { jwinstance.pause(); }, 0);
+                };
+            });
+        } else if (jwinstance.hasOwnProperty("onPlay") == true) {
+            self.already_stopped = false;
+            jwinstance.onPlay(function(e) {
+                if (self.already_stopped == true) {
+                    return;
+                };
+                if (e.oldstate == "buffering") {
+                    self.already_stopped = true;
+                    setTimeout(function() { jwinstance.pause(); }, 0);
+                };
+            });
+        };
+
+        self.unregister_element = function() {
+        };
+    };
+
     function add_element(media_element) {
         if (!m_elements.has(media_element)) {
             for (delegate_type of DELEGATE_TYPES) {
@@ -75,7 +109,7 @@
         };
     };
 
-    DELEGATE_TYPES = [BrowserControlsDelegate, YouTubeDelegate, VideojsDelegate];
+    DELEGATE_TYPES = [BrowserControlsDelegate, YouTubeDelegate, VideojsDelegate, JWPlayerDelegate];
     var m_elements = new Map();
     var m_mutation_observer = new MutationObserver(function(mutation_records) {
         for (mutation of mutation_records) {
