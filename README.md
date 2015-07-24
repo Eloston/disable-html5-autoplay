@@ -1,7 +1,9 @@
 # Disable HTML5 Autoplay
 **A Google Chrome extension that disables autoplay of all HTML5 audio and video**
 
-This extension disables autoplay on all websites. Unlike others that simply pause the media or strip the autoplay attribute in HTML, this extension will also prevent JavaScript from playing the media. Furthermore, dynamically added media will be parsed by this extension.
+This extension disables autoplay on all websites. Unlike others that simply pause the media or strip the autoplay attribute in HTML, this extension will also prevent JavaScript from playing the media. Furthermore, dynamically added media will be parsed by this extension.<br />
+<br />
+To use, simply install the extension. No further user interaction is required.
 
 ## Installation
 
