@@ -34,12 +34,47 @@
 
     function YouTubeDelegate(element, check_type_matches) {
         if (check_type_matches == true) {
+            if (element.classList.contains("html5-main-video") && element.parentElement.classList.contains("html5-video-container")) {
+                var root_player_id = element.parentElement.parentElement.parentElement.id;
+                if (((root_player_id == "player-api") || (root_player_id == "upsell-video") || (root_player_id == "player")) && window.hasOwnProperty("yt")) {
+                    if (yt.hasOwnProperty("player")) {
+                        return yt.player.hasOwnProperty("getPlayerByElement");
+                    };
+                };
+            };
             return false;
         };
 
         var self = this;
 
         self.m_element = element;
+
+        var ytinstance = yt.player.getPlayerByElement(element.parentElement.parentElement.parentElement);
+
+        var disable_yt_autoplay = function() {
+            var init_state = ytinstance.getPlayerState();
+
+            if (init_state == 1) {
+                ytinstance.pauseVideo();
+                ytinstance.seekTo(0);
+            };
+            self.should_pause = (init_state == 5) || (init_state == 3) || (init_state == -1);
+            ytinstance.addEventListener("onStateChange", function(new_state) {
+                if ((new_state == 5) || (new_state == -1)) {
+                    self.should_pause = true;
+                } else if ((new_state == 1) && (self.should_pause == true)) {
+                    self.should_pause = false;
+                    ytinstance.pauseVideo();
+                    ytinstance.seekTo(0);
+                };
+            });
+        };
+
+        if (ytinstance.hasOwnProperty("getPlayerState") == true) {
+            disable_yt_autoplay();
+        } else {
+            ytinstance.addEventListener("onReady", disable_yt_autoplay);
+        };
 
         self.unregister_element = function() {
         };
