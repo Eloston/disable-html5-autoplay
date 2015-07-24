@@ -8,10 +8,6 @@
 
         self.m_element = element;
 
-        if (element.autoplay == true) {
-            element.autoplay = false;
-        };
-
         element.disabled_play = element.play;
 
         element.pause();
@@ -82,12 +78,21 @@
 
     function VideojsDelegate(element, check_type_matches) {
         if (check_type_matches == true) {
+            if (element.classList.contains("vjs-tech") == true) {
+                return element.parentElement.classList.contains("video-js") && window.hasOwnProperty("videojs");
+            };
             return false;
         };
 
         var self = this;
 
         self.m_element = element;
+
+        var vjsinstance = videojs(element.parentElement.id);
+        if (vjsinstance.autoplay() == true) {
+            vjsinstance.autoplay(false);
+            vjsinstance.one("play", function() { vjsinstance.pause(); });
+        };
 
         self.unregister_element = function() {
         };
@@ -149,6 +154,15 @@
     var m_mutation_observer = new MutationObserver(function(mutation_records) {
         for (mutation of mutation_records) {
             if (mutation.target instanceof HTMLMediaElement) {
+                if (mutation.target.autoplay == true) {
+                    mutation.target.autoplay = false;
+                    mutation.target.pause();
+                };
+                if (m_elements.has(mutation.target)) {
+                    if (m_elements.get(mutation.target).constructor(mutation.target, true) == false) {
+                        remove_element(mutation.target);
+                    };
+                };
                 add_element(mutation.target);
             };
             for (added_node of Array.prototype.slice.call(mutation.addedNodes)) {
