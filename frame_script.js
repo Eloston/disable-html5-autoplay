@@ -6,6 +6,15 @@
             self.last_event = performance.now();
         };
 
+        self.initialize = function() {
+            if (!self.configured) {
+                self.configured = true;
+                for (event_type of ["click", "keypress"]) {
+                    window.addEventListener(event_type, input_callback, true);
+                };
+            };
+        };
+
         self.reached_timeout = function() {
             return (performance.now() - self.last_event) < TIMEOUT;
         };
@@ -13,13 +22,11 @@
         var TIMEOUT = 1500;
 
         self.last_event = -2000;
-
-        for (event_type of ["click", "keypress"]) {
-            window.addEventListener(event_type, input_callback, true);
-        };
+        self.configured = false;
     };
 
     function modify_element_play(element, player_callback) {
+        m_event_monitor.initialize();
         element.disabled_play = element.play;
         element.play = function() {
             if (m_event_monitor.reached_timeout() == true) {
