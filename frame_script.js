@@ -184,12 +184,17 @@
 
         var self = this;
 
+        self.event_call_count = 0;
+
         modify_element_play(element, function() {
-            element.dispatchEvent(new Event("play"));
-            element.dispatchEvent(new Event("playing"));
-            //if (element.paused == true) {
-            //    element.dispatchEvent(new Event("pause"));
-            //};
+            if (self.event_call_count < 5) {
+                self.event_call_count++;
+                element.dispatchEvent(new Event("play"));
+                element.dispatchEvent(new Event("playing"));
+                if (element.paused == true) {
+                    setTimeout(function() { element.dispatchEvent(new Event("pause")); }, 100);
+                };
+            };
         });
 
         self.unregister_element = function() {
