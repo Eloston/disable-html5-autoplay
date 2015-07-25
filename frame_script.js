@@ -97,7 +97,6 @@
 
             if (init_state == 1) {
                 ytinstance.pauseVideo();
-                ytinstance.seekTo(0);
             };
             self.should_pause = (init_state == 5) || (init_state == 3) || (init_state == -1);
             ytinstance.addEventListener("onStateChange", function(new_state) {
@@ -106,7 +105,6 @@
                 } else if ((new_state == 1) && (self.should_pause == true)) {
                     self.should_pause = false;
                     ytinstance.pauseVideo();
-                    ytinstance.seekTo(0);
                 };
             });
         };
