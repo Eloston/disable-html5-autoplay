@@ -1,4 +1,42 @@
 (function() {
+    function UserInputEventMonitor() {
+        var self = this;
+
+        function input_callback(event) {
+            self.last_event = performance.now();
+        };
+
+        self.reached_timeout = function() {
+            return (performance.now() - self.last_event) < TIMEOUT;
+        };
+
+        var TIMEOUT = 1500;
+
+        self.last_event = -2000;
+
+        for (event_type of ["click", "keypress"]) {
+            window.addEventListener(event_type, input_callback, true);
+        };
+    };
+
+    function modify_element_play(element, player_callback) {
+        element.disabled_play = element.play;
+        element.play = function() {
+            if (m_event_monitor.reached_timeout() == true) {
+                element.disabled_play();
+            } else {
+                player_callback();
+            };
+        };
+    };
+
+    function restore_element_play(element) {
+        if (element.hasOwnProperty("disabled_play") == true) {
+            element.play = element.disabled_play;
+            delete element.disabled_play;
+        };
+    };
+
     function BrowserControlsDelegate(element, check_type_matches) {
         if (check_type_matches == true) {
             return (element.controls == true);
@@ -132,12 +170,53 @@
         };
     };
 
+    function GenericDelegate(element, check_type_matches) {
+        if (check_type_matches == true) {
+            return true;
+        };
+
+        var self = this;
+
+        modify_element_play(element, function() {
+            element.dispatchEvent(new Event("play"));
+            element.dispatchEvent(new Event("playing"));
+            //if (element.paused == true) {
+            //    element.dispatchEvent(new Event("pause"));
+            //};
+        });
+
+        self.unregister_element = function() {
+            restore_element_play(element);
+        };
+    };
+
     function add_element(media_element) {
-        if (!m_elements.has(media_element)) {
-            for (delegate_type of DELEGATE_TYPES) {
-                if (delegate_type(media_element, true) == true) {
-                    m_elements.set(media_element, new delegate_type(media_element, false));
+        if (m_elements.has(media_element)) {
+            if (m_elements.get(media_element).constructor(media_element, true) == false) {
+                remove_element(media_element);
+            } else if (m_elements.get(media_element) instanceof GenericDelegate) {
+                for (delegate_type of DELEGATE_TYPES) {
+                    if (!(delegate_type == GenericDelegate)) {
+                        if (delegate_type(media_element, true) == true) {
+                            m_elements.set(media_element, new delegate_type(media_element, false));
+                            return;
+                        };
+                    };
                 };
+                return;
+            } else {
+                return;
+            };
+        } else {
+            if (media_element.autoplay == true) {
+                media_element.autoplay = false;
+                media_element.pause();
+            };
+        };
+        for (delegate_type of DELEGATE_TYPES) {
+            if (delegate_type(media_element, true) == true) {
+                m_elements.set(media_element, new delegate_type(media_element, false));
+                return;
             };
         };
     };
@@ -149,20 +228,12 @@
         };
     };
 
-    DELEGATE_TYPES = [BrowserControlsDelegate, YouTubeDelegate, VideojsDelegate, JWPlayerDelegate];
+    DELEGATE_TYPES = [BrowserControlsDelegate, YouTubeDelegate, VideojsDelegate, JWPlayerDelegate, GenericDelegate];
     var m_elements = new Map();
+    var m_event_monitor = new UserInputEventMonitor();
     var m_mutation_observer = new MutationObserver(function(mutation_records) {
         for (mutation of mutation_records) {
             if (mutation.target instanceof HTMLMediaElement) {
-                if (mutation.target.autoplay == true) {
-                    mutation.target.autoplay = false;
-                    mutation.target.pause();
-                };
-                if (m_elements.has(mutation.target)) {
-                    if (m_elements.get(mutation.target).constructor(mutation.target, true) == false) {
-                        remove_element(mutation.target);
-                    };
-                };
                 add_element(mutation.target);
             };
             for (added_node of Array.prototype.slice.call(mutation.addedNodes)) {
