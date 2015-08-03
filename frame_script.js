@@ -1,4 +1,8 @@
 (function() {
+    function send_message(message) {
+        window.dispatchEvent(new CustomEvent("DisableHTML5AutoplayEvent_ToContentScript", { detail: message }));
+    };
+
     function UserInputEventMonitor() {
         var self = this;
 
@@ -44,6 +48,24 @@
         };
     };
 
+    function update_media_element_count(delegate_constructor, should_add) {
+        var delegate_name = DELEGATE_NAMES[DELEGATE_TYPES.indexOf(delegate_constructor)];
+        var message = { element_type: delegate_name };
+        if (should_add == true) {
+            message.action = "add_media_element";
+        } else if (should_add == false) {
+            message.action = "remove_media_element";
+        } else {
+            console.error("frame_script.js: Unknown should_add value: " + JSON.stringify(should_add));
+            return;
+        };
+        send_message(message);
+    };
+
+    function record_autoplay_attempt(delegate_obj) {
+        send_message({ action: "add_autoplay_attempt", element_type: DELEGATE_NAMES[DELEGATE_TYPES.indexOf(delegate_obj.constructor)] });
+    };
+
     function BrowserControlsDelegate(element, check_type_matches) {
         if (check_type_matches == true) {
             return (element.controls == true);
@@ -58,6 +80,7 @@
         element.pause();
 
         element.play = function() {
+            record_autoplay_attempt(self);
             element.dispatchEvent(new Event("play"));
             element.dispatchEvent(new Event("playing"));
             if (element.paused == true) {
@@ -134,7 +157,7 @@
         var vjsinstance = videojs(element.parentElement.id);
         if (vjsinstance.autoplay() == true) {
             vjsinstance.autoplay(false);
-            vjsinstance.one("play", function() { vjsinstance.pause(); });
+            vjsinstance.one("play", function() { record_autoplay_attempt(self); vjsinstance.pause(); });
         };
 
         self.unregister_element = function() {
@@ -155,7 +178,7 @@
         if (jwinstance.hasOwnProperty("once") == true) {
             jwinstance.once("play", function(e) {
                 if (e.oldstate == "buffering") {
-                    setTimeout(function() { jwinstance.pause(); }, 0);
+                    setTimeout(function() { record_autoplay_attempt(self); jwinstance.pause(); }, 0);
                 };
             });
         } else if (jwinstance.hasOwnProperty("onPlay") == true) {
@@ -166,7 +189,7 @@
                 };
                 if (e.oldstate == "buffering") {
                     self.already_stopped = true;
-                    setTimeout(function() { jwinstance.pause(); }, 0);
+                    setTimeout(function() { record_autoplay_attempt(self); jwinstance.pause(); }, 0);
                 };
             });
         };
@@ -185,6 +208,7 @@
         self.event_call_count = 0;
 
         modify_element_play(element, function() {
+            record_autoplay_attempt(self);
             if (self.event_call_count < 5) {
                 self.event_call_count++;
                 element.dispatchEvent(new Event("play"));
@@ -208,6 +232,7 @@
                 for (delegate_type of DELEGATE_TYPES) {
                     if (!(delegate_type == GenericDelegate)) {
                         if (delegate_type(media_element, true) == true) {
+                            update_media_element_count(delegate_type, true);
                             m_elements.set(media_element, new delegate_type(media_element, false));
                             return;
                         };
@@ -221,10 +246,12 @@
             if (media_element.autoplay == true) {
                 media_element.autoplay = false;
                 media_element.pause();
+                send_message({ action: "add_autoplay_attempt", element_type: DELEGATE_NAMES[DELEGATE_TYPES.indexOf(GenericDelegate)] });
             };
         };
         for (delegate_type of DELEGATE_TYPES) {
             if (delegate_type(media_element, true) == true) {
+                update_media_element_count(delegate_type, true);
                 m_elements.set(media_element, new delegate_type(media_element, false));
                 return;
             };
@@ -234,11 +261,13 @@
     function remove_element(media_element) {
         if (m_elements.has(media_element)) {
             m_elements.get(media_element).unregister_element();
+            update_media_element_count(m_elements.get(media_element).constructor, false);
             m_elements.delete(media_element);
         };
     };
 
     DELEGATE_TYPES = [BrowserControlsDelegate, YouTubeDelegate, VideojsDelegate, JWPlayerDelegate, GenericDelegate];
+    DELEGATE_NAMES = ["browser_controls", "youtube", "video.js", "jwplayer", "generic"];
     var m_elements = new Map();
     var m_event_monitor = new UserInputEventMonitor();
     var m_mutation_observer = new MutationObserver(function(mutation_records) {
