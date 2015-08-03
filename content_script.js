@@ -8,12 +8,13 @@ var old_window = window;
 (document.head||document.documentElement).appendChild(frame_script);
 
 function forward_message(customEventInit) {
-    console.log("received message");
+    //console.log("received message");
     chrome.runtime.sendMessage(customEventInit.detail);
 };
 
 window.addEventListener("DisableHTML5AutoplayEvent_ToContentScript", forward_message);
 
+/*
 document.addEventListener("DOMContentLoaded", function(event) {
     window.addEventListener("DisableHTML5AutoplayEvent_ToContentScript", forward_message);
     if (old_document !== document) {
@@ -25,3 +26,4 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
 document.addEventListener("pagehide", function(event) { console.log("pagehide!!!"); });
 document.addEventListener("pageshow", function(event) { console.log("pageshow!!!"); });
+*/
