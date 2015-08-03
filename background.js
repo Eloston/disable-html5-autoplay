@@ -73,5 +73,4 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     return false;
 });
 
-//chrome.browserAction.setBadgeText({text: ""});
 chrome.browserAction.setBadgeBackgroundColor({color: [32, 32, 32, 200]});

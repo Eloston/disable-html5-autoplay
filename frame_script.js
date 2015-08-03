@@ -116,6 +116,7 @@
         var ytinstance = yt.player.getPlayerByElement(element.parentElement.parentElement.parentElement);
 
         var disable_yt_autoplay = function() {
+            ytinstance.removeEventListener("onReady", disable_yt_autoplay);
             var init_state = ytinstance.getPlayerState();
 
             if (init_state == 1) {
@@ -123,7 +124,7 @@
             };
             self.should_pause = (init_state == 5) || (init_state == 3) || (init_state == -1);
             ytinstance.addEventListener("onStateChange", function(new_state) {
-                if ((new_state == 5) || (new_state == -1)) {
+                if (new_state == -1) {
                     self.should_pause = true;
                 } else if ((new_state == 1) && (self.should_pause == true)) {
                     self.should_pause = false;
