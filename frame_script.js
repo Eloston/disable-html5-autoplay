@@ -161,6 +161,24 @@
         if (vjsinstance.autoplay() == true) {
             vjsinstance.autoplay(false);
             vjsinstance.one("play", function() { record_autoplay_attempt(self); vjsinstance.pause(); });
+        } else {
+            var TIMEOUT = 1500;
+            self.last_event = -2000;
+
+            function input_callback(event) {
+                self.last_event = performance.now();
+            };
+
+            for (event_type of ["keydown", "keyup", "mousedown", "mouseup"]) {
+                element.parentElement.addEventListener(event_type, input_callback, true);
+            };
+
+            vjsinstance.on("play", function() {
+                if ((performance.now() - self.last_event) > TIMEOUT) {
+                    record_autoplay_attempt(self);
+                    vjsinstance.pause();
+                };
+            });
         };
 
         self.unregister_element = function() {
