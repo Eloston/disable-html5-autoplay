@@ -56,7 +56,6 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
         };
     } else if (message.action == "add_autoplay_attempt") {
         if (tab_state.hasOwnProperty(message.element_type)) {
-            console.log("adding...");
             tab_state[message.element_type].attempts = tab_state[message.element_type].attempts + 1;
             var total_attempts = 0;
             for (element_type in tab_state) {
