@@ -1,9 +1,16 @@
 # Disable HTML5 Autoplay
 **An extension for Chromium-based browsers that disables autoplay of all HTML5 audio and video**
 
-This extension disables autoplay on all websites. Unlike others that simply pause the media or strip the autoplay attribute in HTML, this extension will also prevent JavaScript from playing the media. Furthermore, dynamically added media will be parsed by this extension.<br />
+This extension disables autoplay on all websites. Unlike others that simply pause the media or strip the autoplay attribute in HTML, this extension will also prevent JavaScript from playing the media. Furthermore, dynamically added media will be parsed by this extension.
+
+## Using this extension
+
+This extension creates an icon next to the address bar (which is called a Browser Action.) The icon has two states:<br />
+* When the icon has color, this means there are media elements on the page.
+* When the icon is a light grey, this means that no media elements are on the page.<br />
+The number that appears on the icon indicates the number of autoplay attempts on the page.<br />
 <br />
-To use, simply install the extension. No further user interaction is required.
+Right now, clicking on the Browser Action does nothing. This will be changed in a future version.
 
 ## Installation
 
