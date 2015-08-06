@@ -219,7 +219,7 @@
         };
     };
 
-    function GenericDelegate(element, check_type_matches) {
+    function UnknownDelegate(element, check_type_matches) {
         if (check_type_matches == true) {
             return true;
         };
@@ -245,13 +245,23 @@
         };
     };
 
-    function add_element(media_element) {
+    function add_element(media_element) { // TODO: Split this function up into add_element and element_mutated
         if (m_elements.has(media_element)) {
+            // TODO: Move autoplay attribute removal into base delegate
+            if (!m_elements.get(media_element).hasOwnProperty("autoplay_removal_count")) {
+                m_elements.get(media_element).autoplay_removal_count = 0;
+            };
+            if ((media_element.autoplay == true) && (m_elements.get(media_element).autoplay_removal_count <= 10)) {
+                m_elements.get(media_element).autoplay_removal_count += 1;
+                media_element.autoplay = false;
+                media_element.pause();
+                send_message({ action: "add_autoplay_attempt", element_type: DELEGATE_NAMES[DELEGATE_TYPES.indexOf(UnknownDelegate)] });
+            };
             if (m_elements.get(media_element).constructor(media_element, true) == false) {
                 remove_element(media_element);
-            } else if (m_elements.get(media_element) instanceof GenericDelegate) {
+            } else if (m_elements.get(media_element) instanceof UnknownDelegate) {
                 for (delegate_type of DELEGATE_TYPES) {
-                    if (!(delegate_type == GenericDelegate)) {
+                    if (!(delegate_type == UnknownDelegate)) {
                         if (delegate_type(media_element, true) == true) {
                             update_media_element_count(delegate_type, true);
                             m_elements.set(media_element, new delegate_type(media_element, false));
@@ -263,12 +273,11 @@
             } else {
                 return;
             };
-        } else {
-            if (media_element.autoplay == true) {
-                media_element.autoplay = false;
-                media_element.pause();
-                send_message({ action: "add_autoplay_attempt", element_type: DELEGATE_NAMES[DELEGATE_TYPES.indexOf(GenericDelegate)] });
-            };
+        };
+        if (media_element.autoplay == true) {
+            media_element.autoplay = false;
+            media_element.pause();
+            send_message({ action: "add_autoplay_attempt", element_type: DELEGATE_NAMES[DELEGATE_TYPES.indexOf(UnknownDelegate)] });
         };
         for (delegate_type of DELEGATE_TYPES) {
             if (delegate_type(media_element, true) == true) {
@@ -287,8 +296,8 @@
         };
     };
 
-    DELEGATE_TYPES = [BrowserControlsDelegate, YouTubeDelegate, VideojsDelegate, JWPlayerDelegate, GenericDelegate];
-    DELEGATE_NAMES = ["browser_controls", "youtube", "video.js", "jwplayer", "generic"];
+    DELEGATE_TYPES = [BrowserControlsDelegate, YouTubeDelegate, VideojsDelegate, JWPlayerDelegate, UnknownDelegate];
+    DELEGATE_NAMES = ["browser_controls", "youtube", "video.js", "jwplayer", "unknown"];
     var m_elements = new Map();
     var m_event_monitor = new UserInputEventMonitor();
     var m_mutation_observer = new MutationObserver(function(mutation_records) {
