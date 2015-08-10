@@ -7,7 +7,8 @@ This extension disables autoplay on all websites. Unlike others that simply paus
 
 This extension creates an icon next to the address bar (which is called a Browser Action.) The icon has two states:<br />
 * When the icon has color, this means there are media elements on the page.
-* When the icon is a light grey, this means that no media elements are on the page.<br />
+* When the icon is a light grey, this means that no media elements are on the page.
+
 The number that appears on the icon indicates the number of autoplay attempts on the page.<br />
 <br />
 Right now, clicking on the Browser Action does nothing. This will be changed in a future version.
