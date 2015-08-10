@@ -101,9 +101,7 @@
             if (element.classList.contains("html5-main-video") && element.parentElement.classList.contains("html5-video-container")) {
                 var root_player_id = element.parentElement.parentElement.parentElement.id;
                 if (((root_player_id == "player-api") || (root_player_id == "upsell-video") || (root_player_id == "player")) && window.hasOwnProperty("yt")) {
-                    if (yt.hasOwnProperty("player")) {
-                        return yt.player.hasOwnProperty("getPlayerByElement");
-                    };
+                    return yt.hasOwnProperty("player");
                 };
             };
             return false;
@@ -111,35 +109,44 @@
 
         var self = this;
 
-        self.m_element = element;
-
-        var ytinstance = yt.player.getPlayerByElement(element.parentElement.parentElement.parentElement);
-
-        var disable_yt_autoplay = function() {
-            ytinstance.removeEventListener("onReady", disable_yt_autoplay);
-            var init_state = ytinstance.getPlayerState();
-
-            if (init_state == 1) {
-                ytinstance.pauseVideo();
-                record_autoplay_attempt(self);
+        function initialize() {
+            if (!(yt.player.hasOwnProperty("getPlayerByElement") && (yt.player.getPlayerByElement instanceof Function))) {
+                setTimeout(initialize, 10);
+                return;
             };
-            self.should_pause = (init_state == 5) || (init_state == 3) || (init_state == -1);
-            ytinstance.addEventListener("onStateChange", function(new_state) {
-                if (new_state == -1) {
-                    self.should_pause = true;
-                } else if ((new_state == 1) && (self.should_pause == true)) {
-                    self.should_pause = false;
+
+            self.m_element = element;
+
+            var ytinstance = yt.player.getPlayerByElement(element.parentElement.parentElement.parentElement);
+
+            var disable_yt_autoplay = function() {
+                ytinstance.removeEventListener("onReady", disable_yt_autoplay);
+                var init_state = ytinstance.getPlayerState();
+
+                if (init_state == 1) {
                     ytinstance.pauseVideo();
                     record_autoplay_attempt(self);
                 };
-            });
+                self.should_pause = (init_state == 5) || (init_state == 3) || (init_state == -1);
+                ytinstance.addEventListener("onStateChange", function(new_state) {
+                    if (new_state == -1) {
+                        self.should_pause = true;
+                    } else if ((new_state == 1) && (self.should_pause == true)) {
+                        self.should_pause = false;
+                        ytinstance.pauseVideo();
+                        record_autoplay_attempt(self);
+                    };
+                });
+            };
+
+            if ("getPlayerState" in ytinstance) {
+                disable_yt_autoplay();
+            } else {
+                ytinstance.addEventListener("onReady", disable_yt_autoplay);
+            };
         };
 
-        if (ytinstance.hasOwnProperty("getPlayerState") == true) {
-            disable_yt_autoplay();
-        } else {
-            ytinstance.addEventListener("onReady", disable_yt_autoplay);
-        };
+        initialize();
 
         self.unregister_element = function() {
         };
@@ -230,7 +237,7 @@
 
         modify_element_play(element, function() {
             record_autoplay_attempt(self);
-            if (self.event_call_count < 5) {
+            if (self.event_call_count < 5) { // TODO: Use Event.eventPhase to prevent some forms of recursion
                 self.event_call_count++;
                 element.dispatchEvent(new Event("play"));
                 element.dispatchEvent(new Event("playing"));
