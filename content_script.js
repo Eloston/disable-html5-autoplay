@@ -12,9 +12,9 @@ document_observer.observe(document, { childList: true });
 
 var frame_script = document.createElement("script");
 frame_script.src = chrome.extension.getURL("frame_script.js");
-frame_script.onload = function() {
-    if (this.hasOwnProperty("parentNode")) {
+frame_script.addEventListener("load", function(event) {
+    if ("parentNode" in this) {
         this.parentNode.removeChild(this);
     };
-};
+});
 (document.head||document.documentElement).appendChild(frame_script);
