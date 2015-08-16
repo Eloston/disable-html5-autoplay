@@ -33,9 +33,3 @@ Right now, clicking on the Browser Action does nothing. This will be changed in 
 2. In `chrome://extensions/`, enable Developer mode
 3. Use "Load unpacked extension..." and select the folder containing the extension source code
 
-## TODO
-
-- Add website whitelisting (using regex?)
-- Add options page
-- Add browser action popup with statistics and whitelisting
-

@@ -1,0 +1,10 @@
+Add browser action popup with statistics and current page whitelisting settings
+Add options page
+Add website whitelisting (with regex capability?)
+Use chrome.tabs.executeScript instead of declaring content scripts in manifest.json(?)
+    Selectively inject scripts into tabs depending on whitelist
+    May allow for earlier script injection with webNavigation events
+Add welcome page on extension update and first time installation to inform the user about how to use my extension
+Cleanup frame_script.js
+    Use ES6-style class declarations and add element mutated callback
+        Inherit from BaseDelegate
