@@ -67,11 +67,11 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
         if (total_count == 0) {
             set_dormant_icon(sender.tab.id);
         };
-    } else if (message.action == "add_autoplay_attempt") {
+    } else if (message.action == "add_autoplay_attempts") {
         if (!tab_state.hasOwnProperty(message.element_type)) {
             tab_state[message.element_type] = { count: 0, attempts: 0 };
         };
-        tab_state[message.element_type].attempts = tab_state[message.element_type].attempts + 1;
+        tab_state[message.element_type].attempts += message.count;
         var total_attempts = 0;
         for (element_type in tab_state) {
             total_attempts = total_attempts + tab_state[element_type].attempts;
