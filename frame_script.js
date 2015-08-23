@@ -1,6 +1,6 @@
 (function() {
     function send_message(message) {
-        window.dispatchEvent(new CustomEvent("DisableHTML5AutoplayEvent_ToContentScript", { detail: message }));
+        setTimeout(function() { window.dispatchEvent(new CustomEvent("DisableHTML5AutoplayEvent_ToContentScript", { detail: message })); }, 0);
     };
 
     function UserInputEventMonitor() {
@@ -29,26 +29,40 @@
         self.configured = false;
     };
 
-    function modify_element_play(element, player_callback) {
+    function modify_element_play(self, element) { // TODO: Move to BaseDelegate class
+        self.event_call_count = 0;
+        self.pseudo_events = {
+            play: new Event("play"),
+            playing: new Event("playing"),
+            pause: new Event("pause")
+        };
         m_event_monitor.initialize();
         element.disabled_play = element.play;
         element.play = function() {
             if (m_event_monitor.reached_timeout() == true) {
                 element.disabled_play();
             } else {
-                player_callback();
+                record_autoplay_attempt(self);
+                if (self.event_call_count < 10 && ((self.pseudo_events.play.eventPhase + self.pseudo_events.playing.eventPhase + self.pseudo_events.pause.eventPhase) == Event.NONE)) {
+                    self.event_call_count++;
+                    element.dispatchEvent(self.pseudo_events.play);
+                    element.dispatchEvent(self.pseudo_events.playing);
+                    if (element.paused == true) {
+                        setTimeout(function() { element.dispatchEvent(self.pseudo_events.pause); }, 100);
+                    };
+                };
             };
         };
     };
 
-    function restore_element_play(element) {
+    function restore_element_play(element) { // TODO: Move to BaseDelegate class
         if (element.hasOwnProperty("disabled_play") == true) {
             element.play = element.disabled_play;
             delete element.disabled_play;
         };
     };
 
-    function update_media_element_count(delegate_constructor, should_add) {
+    function update_media_element_count(delegate_constructor, should_add) { // TODO: Move to BaseDelegate class
         var delegate_name = DELEGATE_NAMES[DELEGATE_TYPES.indexOf(delegate_constructor)];
         var message = { element_type: delegate_name };
         if (should_add == true) {
@@ -62,8 +76,8 @@
         send_message(message);
     };
 
-    function record_autoplay_attempt(delegate_obj) {
-        send_message({ action: "add_autoplay_attempt", element_type: DELEGATE_NAMES[DELEGATE_TYPES.indexOf(delegate_obj.constructor)] });
+    function record_autoplay_attempt(delegate_obj) { // TODO: Move to BaseDelegate class
+        send_message({ action: "add_autoplay_attempts", element_type: DELEGATE_NAMES[DELEGATE_TYPES.indexOf(delegate_obj.constructor)], count: 1 });
     };
 
     function BrowserControlsDelegate(element, check_type_matches) {
@@ -73,26 +87,14 @@
 
         var self = this;
 
-        self.m_element = element;
-
-        element.disabled_play = element.play;
-
-        element.pause();
-
-        element.play = function() {
-            record_autoplay_attempt(self);
-            element.dispatchEvent(new Event("play"));
-            element.dispatchEvent(new Event("playing"));
-            if (element.paused == true) {
-                element.dispatchEvent(new Event("pause"));
-            };
+        if (!element.paused) {
+            element.pause();
         };
 
+        modify_element_play(self, element)
+
         self.unregister_element = function() {
-            if (self.m_element.hasOwnProperty("disabled_play")) {
-                self.m_element.play = self.m_element.disabled_play;
-                delete self.m_element.disabled_play;
-            };
+            restore_element_play(element);
         };
     };
 
@@ -238,28 +240,28 @@
 
         var self = this;
 
-        self.event_call_count = 0;
+        if (!element.paused) {
+            element.pause();
+        };
 
-        modify_element_play(element, function() {
-            record_autoplay_attempt(self);
-            if (self.event_call_count < 5) { // TODO: Use Event.eventPhase to prevent some forms of recursion
-                self.event_call_count++;
-                element.dispatchEvent(new Event("play"));
-                element.dispatchEvent(new Event("playing"));
-                if (element.paused == true) {
-                    setTimeout(function() { element.dispatchEvent(new Event("pause")); }, 100);
-                };
-            };
-        });
+        modify_element_play(self, element);
 
         self.unregister_element = function() {
             restore_element_play(element);
         };
     };
 
+    function add_regular_play(element, delegate_type) { // TODO: Move this into BaseDelegate constructor
+        element.play = m_prototype_play.bind(element);
+        if (m_undelegated_elements.has(element)) {
+            send_message({ action: "add_autoplay_attempts", element_type: DELEGATE_NAMES[DELEGATE_TYPES.indexOf(delegate_type)], count: m_undelegated_elements.get(element) });
+            m_undelegated_elements.delete(element);
+        };
+    };
+
     function add_element(media_element) { // TODO: Split this function up into add_element and element_mutated
         if (m_elements.has(media_element)) {
-            // TODO: Move autoplay attribute removal into base delegate
+            // TODO: Move autoplay attribute removal into BaseDelegate
             if (!m_elements.get(media_element).hasOwnProperty("autoplay_removal_count")) {
                 m_elements.get(media_element).autoplay_removal_count = 0;
             };
@@ -267,7 +269,7 @@
                 m_elements.get(media_element).autoplay_removal_count += 1;
                 media_element.autoplay = false;
                 media_element.pause();
-                send_message({ action: "add_autoplay_attempt", element_type: DELEGATE_NAMES[DELEGATE_TYPES.indexOf(UnknownDelegate)] });
+                send_message({ action: "add_autoplay_attempts", element_type: DELEGATE_NAMES[DELEGATE_TYPES.indexOf(UnknownDelegate)], count: 1 });
             };
             if (m_elements.get(media_element).constructor(media_element, true) == false) {
                 remove_element(media_element);
@@ -276,6 +278,7 @@
                     if (!(delegate_type == UnknownDelegate)) {
                         if (delegate_type(media_element, true) == true) {
                             update_media_element_count(delegate_type, true);
+                            add_regular_play(media_element, delegate_type);
                             m_elements.set(media_element, new delegate_type(media_element, false));
                             return;
                         };
@@ -289,11 +292,12 @@
         if (media_element.autoplay == true) {
             media_element.autoplay = false;
             media_element.pause();
-            send_message({ action: "add_autoplay_attempt", element_type: DELEGATE_NAMES[DELEGATE_TYPES.indexOf(UnknownDelegate)] });
+            send_message({ action: "add_autoplay_attempts", element_type: DELEGATE_NAMES[DELEGATE_TYPES.indexOf(UnknownDelegate)], count: 1 });
         };
         for (delegate_type of DELEGATE_TYPES) {
             if (delegate_type(media_element, true) == true) {
                 update_media_element_count(delegate_type, true);
+                add_regular_play(media_element, delegate_type);
                 m_elements.set(media_element, new delegate_type(media_element, false));
                 return;
             };
@@ -329,6 +333,33 @@
             };
         };
     });
+    var m_undelegated_elements = new Map();
+    var m_prototype_play = HTMLMediaElement.prototype.play
+    HTMLMediaElement.prototype.play = function() {
+        var self = this;
+        if (m_undelegated_elements.has(self)) {
+            m_undelegated_elements.get(self) += 1;
+            if (m_undelegated_elements.get(self) > 10) {
+                return;
+            };
+        } else {
+            m_undelegated_elements.set(self, 1);
+        };
+        if (self.hasOwnProperty("pseudo_events")) {
+            if ((self.pseudo_events.play + self.pseudo_events.playing + self.pseudo_events.pause) > Event.NONE) {
+                return;
+            };
+        } else {
+            self.pseudo_events = {
+                play: new Event("play"),
+                playing: new Event("playing"),
+                pause: new Event("pause")
+            };
+        };
+        self.dispatchEvent(self.pseudo_events.play);
+        self.dispatchEvent(self.pseudo_events.playing);
+        setTimeout(function() { self.dispatchEvent(self.pseudo_events.pause); }, 100);
+    };
 
     m_mutation_observer.observe(document, {
         childList: true,
