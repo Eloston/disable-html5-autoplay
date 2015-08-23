@@ -23,6 +23,19 @@ chrome.webNavigation.onCommitted.addListener(function(details) {
     };
 }, { url: [{ schemes: ["http", "https", "file"] }] });
 
+chrome.tabs.onRemoved.addListener(function(tabId, removeInfo) {
+    if (g_tab_states.has(tabId)) {
+        g_tab_states.delete(tabId);
+    };
+});
+
+chrome.tabs.onReplaced.addListener(function(addedTabId, removedTabId) {
+    if (g_tab_states.has(removedTabId) && !g_tab_states.has(addedTabId)) {
+        g_tab_states.set(addedTabId, g_tab_states.get(removedTabId));
+        g_tab_states.delete(removedTabId);
+    };
+});
+
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     if (!sender.hasOwnProperty("tab")) {
         // Page is being unloaded

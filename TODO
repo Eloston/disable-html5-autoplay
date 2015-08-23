@@ -13,3 +13,4 @@ Add debug logging
 Cleanup frame_script.js
     Use ES6-style class declarations and add element mutated callback
         Inherit from BaseDelegate
+Add option to disable media buffering(?)

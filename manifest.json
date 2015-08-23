@@ -33,5 +33,5 @@
     ],
     "web_accessible_resources": ["frame_script.js"],
 
-    "permissions": ["webNavigation"]
+    "permissions": ["webNavigation", "tabs"]
 }
