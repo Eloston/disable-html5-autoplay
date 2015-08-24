@@ -1,4 +1,4 @@
-(function() {
+function frame_script_code() {
     function send_message(message) {
         setTimeout(function() { window.dispatchEvent(new CustomEvent("DisableHTML5AutoplayEvent_ToContentScript", { detail: message })); }, 0);
     };
@@ -371,4 +371,4 @@
     for (media_element of Array.prototype.slice.call(document.querySelectorAll("audio, video"))) {
         add_element(media_element);
     };
-})();
+};
