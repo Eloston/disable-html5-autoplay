@@ -13,7 +13,7 @@ function frame_script_code() {
         self.initialize = function() {
             if (!self.configured) {
                 self.configured = true;
-                for (event_type of ["click", "keypress"]) {
+                for (event_type of ["keydown", "keyup", "mousedown", "mouseup"]) {
                     window.addEventListener(event_type, input_callback, true);
                 };
             };
