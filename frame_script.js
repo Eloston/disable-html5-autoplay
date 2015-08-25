@@ -29,39 +29,6 @@ function frame_script_code() {
         self.configured = false;
     };
 
-    function modify_element_play(self, element) { // TODO: Move to BaseDelegate class
-        self.event_call_count = 0;
-        self.pseudo_events = {
-            play: new Event("play"),
-            playing: new Event("playing"),
-            pause: new Event("pause")
-        };
-        m_event_monitor.initialize();
-        element.disabled_play = element.play;
-        element.play = function() {
-            if (m_event_monitor.reached_timeout() == true) {
-                element.disabled_play();
-            } else {
-                record_autoplay_attempt(self);
-                if (self.event_call_count < 10 && ((self.pseudo_events.play.eventPhase + self.pseudo_events.playing.eventPhase + self.pseudo_events.pause.eventPhase) == Event.NONE)) {
-                    self.event_call_count++;
-                    element.dispatchEvent(self.pseudo_events.play);
-                    element.dispatchEvent(self.pseudo_events.playing);
-                    if (element.paused == true) {
-                        setTimeout(function() { element.dispatchEvent(self.pseudo_events.pause); }, 100);
-                    };
-                };
-            };
-        };
-    };
-
-    function restore_element_play(element) { // TODO: Move to BaseDelegate class
-        if (element.hasOwnProperty("disabled_play") == true) {
-            element.play = element.disabled_play;
-            delete element.disabled_play;
-        };
-    };
-
     function update_media_element_count(delegate_constructor, should_add) { // TODO: Move to BaseDelegate class
         var delegate_name = DELEGATE_NAMES[DELEGATE_TYPES.indexOf(delegate_constructor)];
         var message = { element_type: delegate_name };
@@ -91,10 +58,32 @@ function frame_script_code() {
             element.pause();
         };
 
-        modify_element_play(self, element)
+        self.last_call = -2000;
+        self.pseudo_events = {
+            play: new Event("play"),
+            playing: new Event("playing"),
+            pause: new Event("pause")
+        };
+
+        element.disabled_play = element.play;
+
+        element.play = function() {
+            record_autoplay_attempt(self);
+            if ((performance.now() - self.last_call) > 10 && ((self.pseudo_events.play.eventPhase + self.pseudo_events.playing.eventPhase + self.pseudo_events.pause.eventPhase) == Event.NONE)) {
+                self.last_call = performance.now();
+                element.dispatchEvent(self.pseudo_events.play);
+                element.dispatchEvent(self.pseudo_events.playing);
+                if (element.paused == true) {
+                    setTimeout(function() { element.dispatchEvent(self.pseudo_events.pause); }, 1000);
+                };
+            };
+        };
 
         self.unregister_element = function() {
-            restore_element_play(element);
+            if (element.hasOwnProperty("disabled_play") == true) {
+                element.play = element.disabled_play;
+                delete element.disabled_play;
+            };
         };
     };
 
@@ -244,10 +233,35 @@ function frame_script_code() {
             element.pause();
         };
 
-        modify_element_play(self, element);
+        self.last_call = -2000;
+        self.pseudo_events = {
+            play: new Event("play"),
+            playing: new Event("playing"),
+            pause: new Event("pause")
+        };
+        m_event_monitor.initialize();
+        element.disabled_play = element.play;
+        element.play = function() {
+            if (m_event_monitor.reached_timeout() == true) {
+                element.disabled_play();
+            } else {
+                record_autoplay_attempt(self);
+                if ((performance.now() - self.last_call) > 10 && ((self.pseudo_events.play.eventPhase + self.pseudo_events.playing.eventPhase + self.pseudo_events.pause.eventPhase) == Event.NONE)) {
+                    self.last_call = performance.now();
+                    element.dispatchEvent(self.pseudo_events.play);
+                    element.dispatchEvent(self.pseudo_events.playing);
+                    if (element.paused == true) {
+                        setTimeout(function() { element.dispatchEvent(self.pseudo_events.pause); }, 1000);
+                    };
+                };
+            };
+        };
 
         self.unregister_element = function() {
-            restore_element_play(element);
+            if (element.hasOwnProperty("disabled_play") == true) {
+                element.play = element.disabled_play;
+                delete element.disabled_play;
+            };
         };
     };
 
@@ -277,6 +291,7 @@ function frame_script_code() {
                 for (delegate_type of DELEGATE_TYPES) {
                     if (!(delegate_type == UnknownDelegate)) {
                         if (delegate_type(media_element, true) == true) {
+                            remove_element(media_element);
                             update_media_element_count(delegate_type, true);
                             add_regular_play(media_element, delegate_type);
                             m_elements.set(media_element, new delegate_type(media_element, false));
@@ -358,7 +373,7 @@ function frame_script_code() {
         };
         self.dispatchEvent(self.pseudo_events.play);
         self.dispatchEvent(self.pseudo_events.playing);
-        setTimeout(function() { self.dispatchEvent(self.pseudo_events.pause); }, 100);
+        setTimeout(function() { self.dispatchEvent(self.pseudo_events.pause); }, 1000);
     };
 
     m_mutation_observer.observe(document, {
