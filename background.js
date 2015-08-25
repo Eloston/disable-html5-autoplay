@@ -1,15 +1,58 @@
+BROWSER_ACTION_ICON_STATES = {
+    DORMANT: 0,
+    ACTIVE: 1,
+    DORMANT_WHITELISTED: 2,
+    ACTIVE_WHITELISTED: 3
+};
 g_tab_states = new Map();
+g_browser_action_icon_updater = new function() {
+    var self = this;
+
+    self.m_pending = new Map();
+
+    function update_tab_icon(tabId) {
+        if (!g_tab_states.has(tabId)) {
+            return;
+        };
+        if (self.m_pending.get(tabId).pending == BROWSER_ACTION_ICON_STATES.DORMANT) {
+            chrome.browserAction.setIcon({ tabId: tabId, path: { "19": "images/dormant_19.png", "38": "images/dormant_38.png" } });
+        } else if (self.m_pending.get(tabId).pending == BROWSER_ACTION_ICON_STATES.ACTIVE) {
+            chrome.browserAction.setIcon({ tabId: tabId, path: { "19": "images/active_19.png", "38": "images/active_38.png" } });
+        } else {
+            console.error("background.js: Invalid Browser Action icon state: " + self.m_pending.get(tabId).toString());
+            return;
+        };
+        self.m_pending.get(tabId).last_update = performance.now();
+    };
+
+    function run_update_when_ready(tabId) {
+        if (performance.now() - self.m_pending.get(tabId).last_update > 500) {
+            update_tab_icon(tabId);
+        } else {
+            setTimeout(function() { update_tab_icon(tabId); }, performance.now() - self.m_pending.get(tabId).last_update);
+        };
+    };
+
+    self.update_state = function(tabId, state) {
+        if (self.m_pending.has(tabId)) {
+            self.m_pending.get(tabId).pending = state;
+        } else {
+            self.m_pending.set(tabId, { pending: state, last_update: -9001 });
+        };
+        run_update_when_ready(tabId);
+    };
+};
 
 function set_active_icon(tabId) {
     if (g_tab_states.get(tabId).browser_action_icon_active == false) {
-        chrome.browserAction.setIcon({ tabId: tabId, path: { "19": "images/active_19.png", "38": "images/active_38.png" } });
+        g_browser_action_icon_updater.update_state(tabId, BROWSER_ACTION_ICON_STATES.ACTIVE);
         g_tab_states.get(tabId).browser_action_icon_active = true;
     };
 };
 
 function set_dormant_icon(tabId) {
     if (g_tab_states.get(tabId).browser_action_icon_active == true) {
-        chrome.browserAction.setIcon({ tabId: tabId, path: { "19": "images/dormant_19.png", "38": "images/dormant_38.png" } });
+        g_browser_action_icon_updater.update_state(tabId, BROWSER_ACTION_ICON_STATES.DORMANT);
         g_tab_states.get(tabId).browser_action_icon_active = false;
     };
 };
