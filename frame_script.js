@@ -55,6 +55,7 @@ function frame_script_code() {
         var self = this;
 
         if (!element.paused) {
+            record_autoplay_attempt(self);
             element.pause();
         };
 
@@ -100,9 +101,16 @@ function frame_script_code() {
 
         var self = this;
 
+        self.early_pause = false;
+        if (!element.paused) {
+            element.pause();
+            record_autoplay_attempt(self);
+            self.early_pause = true;
+        };
+
         function initialize() {
             if (!(yt.player.hasOwnProperty("getPlayerByElement") && (yt.player.getPlayerByElement instanceof Function))) {
-                setTimeout(initialize, 10);
+                setTimeout(initialize, 5);
                 return;
             };
 
@@ -117,6 +125,8 @@ function frame_script_code() {
                 if (init_state == 1) {
                     ytinstance.pauseVideo();
                     record_autoplay_attempt(self);
+                } else if (self.early_pause == true) {
+                    ytinstance.pauseVideo();
                 };
                 self.should_pause = (init_state == 5) || (init_state == 3) || (init_state == -1);
                 ytinstance.addEventListener("onStateChange", function(new_state) {
@@ -126,6 +136,8 @@ function frame_script_code() {
                         self.should_pause = false;
                         ytinstance.pauseVideo();
                         record_autoplay_attempt(self);
+                    } else if ((new_state == 2) && !element.paused) {
+                        ytinstance.pauseVideo();
                     };
                 });
             };
@@ -154,6 +166,11 @@ function frame_script_code() {
         var self = this;
 
         self.m_element = element;
+
+        if (!element.paused) {
+            element.pause();
+            record_autoplay_attempt(self);
+        };
 
         var vjsinstance = videojs(element.parentElement.id);
         if (vjsinstance.autoplay() == true) {
@@ -197,6 +214,11 @@ function frame_script_code() {
 
         self.m_element = element;
 
+        if (!element.paused) {
+            element.pause();
+            record_autoplay_attempt(self);
+        };
+
         var jwinstance = jwplayer(element.parentElement.parentElement);
 
         if (jwinstance.hasOwnProperty("once") == true) {
@@ -230,6 +252,7 @@ function frame_script_code() {
         var self = this;
 
         if (!element.paused) {
+            record_autoplay_attempt(self);
             element.pause();
         };
 
