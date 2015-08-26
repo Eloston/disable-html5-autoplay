@@ -12,9 +12,5 @@ document_observer.observe(document, { childList: true });
 
 var frame_script_element = document.createElement("script");
 frame_script_element.textContent = "(" + frame_script_code.toString() + ")();";
-frame_script_element.addEventListener("load", function(event) {
-    if ("parentNode" in this) {
-        this.parentNode.removeChild(this);
-    };
-});
-(document.head||document.documentElement).appendChild(frame_script_element);
+document.documentElement.appendChild(frame_script_element);
+document.documentElement.removeChild(frame_script_element);
