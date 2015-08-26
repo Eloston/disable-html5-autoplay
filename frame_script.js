@@ -66,8 +66,6 @@ function frame_script_code() {
             pause: new Event("pause")
         };
 
-        element.disabled_play = element.play;
-
         element.play = function() {
             record_autoplay_attempt(self);
             if ((performance.now() - self.last_call) > 10 && ((self.pseudo_events.play.eventPhase + self.pseudo_events.playing.eventPhase + self.pseudo_events.pause.eventPhase) == Event.NONE)) {
@@ -81,10 +79,7 @@ function frame_script_code() {
         };
 
         self.unregister_element = function() {
-            if (element.hasOwnProperty("disabled_play") == true) {
-                element.play = element.disabled_play;
-                delete element.disabled_play;
-            };
+            element.play = m_prototype_play;
         };
     };
 
@@ -263,10 +258,9 @@ function frame_script_code() {
             pause: new Event("pause")
         };
         m_event_monitor.initialize();
-        element.disabled_play = element.play;
         element.play = function() {
             if (m_event_monitor.reached_timeout() == true) {
-                element.disabled_play();
+                m_prototype_play.call(element);
             } else {
                 record_autoplay_attempt(self);
                 if ((performance.now() - self.last_call) > 10 && ((self.pseudo_events.play.eventPhase + self.pseudo_events.playing.eventPhase + self.pseudo_events.pause.eventPhase) == Event.NONE)) {
@@ -281,15 +275,12 @@ function frame_script_code() {
         };
 
         self.unregister_element = function() {
-            if (element.hasOwnProperty("disabled_play") == true) {
-                element.play = element.disabled_play;
-                delete element.disabled_play;
-            };
+            element.play = m_prototype_play;
         };
     };
 
     function add_regular_play(element, delegate_type) { // TODO: Move this into BaseDelegate constructor
-        element.play = m_prototype_play.bind(element);
+        element.play = m_prototype_play;
         if (m_undelegated_elements.has(element)) {
             send_message({ action: "add_autoplay_attempts", element_type: DELEGATE_NAMES[DELEGATE_TYPES.indexOf(delegate_type)], count: m_undelegated_elements.get(element) });
             m_undelegated_elements.delete(element);
