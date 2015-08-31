@@ -16,7 +16,8 @@
         "default_icon": {
             "19": "images/dormant_19.png",
             "38": "images/dormant_38.png"
-        }
+        },
+        "default_popup": "popup.html"
     },
     "background": {
         "scripts": ["background.js"],

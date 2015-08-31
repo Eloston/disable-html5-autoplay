@@ -1,4 +1,5 @@
 function forward_message(customEventInit) {
+    customEventInit.detail.sender = "frame";
     chrome.runtime.sendMessage(customEventInit.detail);
 };
 
