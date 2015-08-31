@@ -10,14 +10,16 @@ function frame_script_code() {
             self.last_event = performance.now();
         };
 
-        self.initialize = function() {
-            if (!self.configured) {
-                self.configured = true;
-                for (event_type of ["keydown", "keyup", "mousedown", "mouseup"]) {
-                    window.addEventListener(event_type, input_callback, true);
-                };
+        function init_handlers() {
+            for (event_type of ["keydown", "keyup", "mousedown", "mouseup"]) {
+                window.addEventListener(event_type, input_callback, true);
             };
         };
+        init_handlers();
+        var document_observer = new MutationObserver(function(mutation_records) {
+            init_handlers();
+        });
+        document_observer.observe(document, { childList: true });
 
         self.reached_timeout = function() {
             return (performance.now() - self.last_event) < TIMEOUT;
@@ -257,7 +259,6 @@ function frame_script_code() {
             playing: new Event("playing"),
             pause: new Event("pause")
         };
-        m_event_monitor.initialize();
         element.play = function() {
             if (m_event_monitor.reached_timeout() == true) {
                 m_prototype_play.call(element);
