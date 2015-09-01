@@ -1,4 +1,5 @@
 TODO list (organized in descending priority)
+Replace checkbox with something else (checkboxes don't scale on Opera)
 Add options page
 Add persistent website whitelist (with regex capability?)
 Add option to detect clicks within a certain rectangular area of media elements
