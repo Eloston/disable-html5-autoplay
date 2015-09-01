@@ -23,15 +23,6 @@
         "scripts": ["background.js"],
         "persistent": true
     },
-    "content_scripts": [
-        {
-            "matches": ["<all_urls>"],
-            "js": ["frame_script.js", "content_script.js"],
-            "all_frames": true,
-            "match_about_blank": true,
-            "run_at": "document_start"
-        }
-    ],
 
-    "permissions": ["webNavigation"]
+    "permissions": ["webNavigation", "<all_urls>"]
 }
