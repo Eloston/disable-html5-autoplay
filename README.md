@@ -1,19 +1,33 @@
 # Disable HTML5 Autoplay
 **An extension for Chromium-based browsers that disables autoplay of all HTML5 audio and video**
 
-This extension disables autoplay on all websites. Unlike others that simply pause the media or strip the autoplay attribute in HTML, this extension will also prevent JavaScript from playing the media. Furthermore, dynamically added media will be parsed by this extension.
+This extension disables HTML5 media autoplay on all websites. It requires little to no user interaction and should work on all websites without breaking functionality. 
+
+Here are some of its features with some technical details:
+* Stops media with the `autoplay` attribute
+* Works on dynamically-inserted elements and all iframes
+* Toggle autoplay on second-level domains (will be saved across browser sessions in the future)
+* Media player-specific code to prevent the controls from breaking
+* Prevents unauthorized invocations of the `play()` function via detecting user input events (for media without special code)
+  * Fires `play`, `playing`, and `pause` events manually during an unauthorized invocation
 
 ## Using this extension
 
-This extension creates an icon next to the address bar (which is called a Browser Action.) The icon has two states:<br />
-* When the icon has color, this means there are media elements on the page.
-* When the icon is a light grey, this means that no media elements are on the page.
+After installation, the extension will function on all new tabs.
 
-The number that appears on the icon indicates the number of autoplay attempts on the page.<br />
-<br />
-Right now, clicking on the Browser Action does nothing. This will be changed in a future version.
+This extension creates an icon next to the address bar (which is called a Browser Action.) The icon properties have tab-specific meanings:
+* When the icon has color, this means that autoplay is disabled.
+* When the icon is a light grey, this means that autoplay is enabled.
+* The number that appears over the icon is the number of autoplay attempts.
+
+When the Browser Action is clicked, a popup will appear with the following:
+* A checkbox to toggle autoplay for the current page's second-level domain. When unchecked, autoplay is disabled. When checked, autoplay is enabled.
+* A section displaying the total number of autoplay attempts and the total number of media elements
+* A section with the number of media elements and the number of autoplay attempts for each media player type.
 
 ## Installation
+
+Currently, only Chrome/Chromium and Opera are supported. Firefox will be supported when [WebExtensions](https://wiki.mozilla.org/WebExtensions) has matured enough to support all the features necessary.
 
 ### Install from Chrome Webstore
 
