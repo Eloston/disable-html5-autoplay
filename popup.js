@@ -8,10 +8,15 @@ DELEGATE_NAMES = {
 
 function send_message(message, responseCallback) {
     message.sender = "popup";
-    chrome.runtime.sendMessage(message, {}, responseCallback);
+    message.destination = "background";
+    if (responseCallback instanceof Function) {
+        chrome.runtime.sendMessage(message, new Object(), responseCallback);
+    } else {
+        chrome.runtime.sendMessage(message);
+    };
 };
 
-function reset_data() {
+function clear_data() {
     for (element_id of ["media-element-count", "autoplay-attempts", "statistics"]) {
         var current_element = document.getElementById(element_id);
         while (current_element.firstChild) {
@@ -20,10 +25,16 @@ function reset_data() {
     };
 };
 
-function initialize_data(statistics) {
+function set_data(can_run, autoplay_enabled, statistics) {
+    var autoplay_toggle_checkbox = document.getElementById("autoplay-toggle");
     var media_element_count_element = document.getElementById("media-element-count");
     var autoplay_attempts_element = document.getElementById("autoplay-attempts");
     var statistics_element = document.getElementById("statistics");
+    autoplay_toggle_checkbox.checked = autoplay_enabled;
+    autoplay_toggle_checkbox.disabled = !can_run;
+    if (can_run) {
+        document.getElementById("can-run-is-false").hidden = "hidden";
+    }
     if (Object.keys(statistics).length > 0) {
         var total_count = 0;
         var total_attempts = 0;
@@ -58,13 +69,35 @@ function initialize_data(statistics) {
     };
 };
 
+function initialize_data(response_array) {
+    set_data(response_array[0], response_array[1], response_array[2]);
+};
+
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-    if (message.sender == "background" && message.action == "update_popup") {
+    if (message.sender == "background" && message.destination == "popup" && message.action == "update_popup") {
         if (message.tabid == g_tab_id) {
-            reset_data();
-            initialize_data(message.statistics);
+            clear_data();
+            set_data(message.can_run, message.autoplay_enabled, message.statistics);
         };
     };
+});
+
+document.getElementById("autoplay-toggle").addEventListener("mouseup", function(event) {
+    var autoplay_toggle_element = document.getElementById("autoplay-toggle");
+    if (autoplay_toggle_element.disabled === true) {
+        return;
+    };
+    var click_reload_element = document.getElementById("click-reload");
+    if (click_reload_element.hasAttribute("hidden")) {
+        click_reload_element.removeAttribute("hidden");
+    } else {
+        click_reload_element.setAttribute("hidden", "hidden");
+    };
+});
+
+document.getElementById("click-reload").addEventListener("mouseup", function(event) {
+    document.getElementById("click-reload").setAttribute("hidden", "hidden");
+    send_message({action: "update_whitelist", autoplay_enabled: document.getElementById("autoplay-toggle").checked, tabid: g_tab_id});
 });
 
 var manifest_details = chrome.runtime.getManifest();

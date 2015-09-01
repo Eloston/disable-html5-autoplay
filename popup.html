@@ -1,10 +1,16 @@
 <!doctype html>
-<html style="white-space: nowrap;">
+<html>
     <body>
+        <div id="click-reload" hidden="hidden">Changes will take effect on a page reload.<br /><br />Click to reload the page.</div>
         <div id="main-heading">
             <div id="extension-name"></div>
             <div id="extension-version"></div>
         </div>
+        <div class="subheading">Toggle Autoplay</div>
+        <center>
+            <input type="checkbox" id="autoplay-toggle" style="width: 5em; height: 5em; margin: 1em 1em 1em 1em;"></input>
+        </center>
+        <div id="can-run-is-false">Autoplay cannot be disabled on this page</div>
         <div class="subheading">Totals</div>
         <div class="text-content">
             <span>Media elements: <span id="media-element-count" class="darker-text"></span></span>
@@ -17,6 +23,9 @@
     <head>
         <script src="popup.js"></script>
         <style>
+            html {
+                white-space: nowrap;
+            }
             body {
                 border: 0;
                 margin: 0;
@@ -25,6 +34,16 @@
             p {
                 margin: inherit;
                 padding: inherit;
+            }
+            #click-reload {
+                position: fixed;
+                top: 50%;
+                margin: 2em 2em 2em 2em;
+                padding: 1em 1em 1em 1em;
+                white-space: normal;
+                color: #eeeeee;
+                background: rgba(44, 44, 44, 0.8);
+                border-radius: 0.5em;
             }
             #main-heading {
                 margin: 0;
@@ -42,6 +61,12 @@
                 font-size: 0.88em;
                 font-weight: normal;
             }
+            #can-run-is-false {
+                text-align: center;
+                color: #666666;
+                white-space: normal;
+                margin: 0em 1em 0.8em 1em;
+            }
             .subheading {
                 background-color: #eeeeee;
                 border: 0;
@@ -55,7 +80,7 @@
             .text-content {
                 text-align: center;
                 color: #666666;
-                margin:  0.5em 1em 0.5em 1em;
+                margin: 0.8em 1em 0.8em 1em;
             }
             .darker-text {
                 color: #333333;

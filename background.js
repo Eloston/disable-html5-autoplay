@@ -4,6 +4,10 @@ BROWSER_ACTION_ICON_STATES = {
     DORMANT_WHITELISTED: 2,
     ACTIVE_WHITELISTED: 3
 };
+PERMANENT_WHITELIST = [
+    "https://chrome.google.com/webstore"
+];
+g_whitelist = new Set();
 g_tab_states = new Map();
 g_browser_action_icon_updater = new function() {
     var self = this;
@@ -43,9 +47,42 @@ g_browser_action_icon_updater = new function() {
     };
 };
 
-function send_message(message) {
+function get_second_level_domain(url_string) {
+    var url_parser = document.createElement("a");
+    url_parser.href = url_string;
+    var exploded_url = url_parser.hostname.split(".");
+    return exploded_url[exploded_url.length - 2] + "." + exploded_url[exploded_url.length - 1];
+};
+
+function send_tab_message(tabid, message, options) {
     message.sender = "background";
-    chrome.runtime.sendMessage(message);
+    message.destination = "frame";
+    chrome.tabs.sendMessage(tabid, message, options);
+};
+
+function update_popup(tabid) {
+    if (g_tab_states.has(tabid)) {
+        var tab_state = g_tab_states.get(tabid);
+        chrome.runtime.sendMessage({
+            sender: "background",
+            destination: "popup",
+            action: "update_popup",
+            can_run: true,
+            tabid: tabid,
+            autoplay_enabled: tab_state.autoplay_enabled,
+            statistics: tab_state.media_statistics
+        });
+    } else {
+        chrome.runtime.sendMessage({
+            sender: "background",
+            destination: "popup",
+            action: "update_popup",
+            can_run: false,
+            tabid: tabid,
+            autoplay_enabled: true,
+            statistics: new Object()
+        });
+    };
 };
 
 function set_active_icon(tabId) {
@@ -67,7 +104,28 @@ chrome.webNavigation.onCommitted.addListener(function(details) {
         if (g_tab_states.has(details.tabId)) {
             g_tab_states.delete(details.tabId);
         };
-        g_tab_states.set(details.tabId, { browser_action_icon_active: false, media_statistics: new Object() });
+        var domain_name = get_second_level_domain(details.url);
+        var autoplay_enabled = false;
+        for (whitelisted_domain of g_whitelist) {
+            if (domain_name == whitelisted_domain) {
+                autoplay_enabled = true;
+                break;
+            };
+        };
+        g_tab_states.set(details.tabId, { autoplay_enabled: autoplay_enabled, browser_action_icon_active: false, domain_name: domain_name, media_statistics: new Object() });
+    };
+    for (whitelisted_url of PERMANENT_WHITELIST) {
+        if (details.url.startsWith(whitelisted_url)) {
+            g_tab_states.delete(details.tabId);
+            update_popup(details.tabId);
+            return;
+        };
+    };
+    update_popup(details.tabId);
+    if (g_tab_states.has(details.tabId) && !g_tab_states.get(details.tabId).autoplay_enabled) {
+        for (filename of ["frame_script.js", "content_script.js"]) {
+            chrome.tabs.executeScript(details.tabId, {file: filename, allFrames: true, matchAboutBlank: true, runAt: "document_start"});
+        };
     };
 }, { url: [{ schemes: ["http", "https", "file"] }] });
 
@@ -85,7 +143,10 @@ chrome.tabs.onReplaced.addListener(function(addedTabId, removedTabId) {
 });
 
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-    if (!("sender" in message)) {
+    if (!("sender" in message) || !("destination" in message)) {
+        return false;
+    };
+    if (!(message.destination == "background") || (message.sender == "background")) {
         return false;
     };
     if (message.sender == "frame") {
@@ -133,21 +194,36 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
             console.error("background.js: Unknown message.action received from frame: " + JSON.stringify(message));
             return false;
         };
-        send_message({action: "update_popup", tabid: sender.tab.id, statistics: tab_state});
+        update_popup(sender.tab.id);
     } else if (!("tab" in sender) && (message.sender == "popup")) {
         if (message.action == "initialize_popup") {
             if (g_tab_states.has(message.tabid)) {
-                sendResponse(g_tab_states.get(message.tabid).media_statistics);
+                var tab_state = g_tab_states.get(message.tabid);
+                sendResponse([true, tab_state.autoplay_enabled, tab_state.media_statistics]);
             } else {
-                sendResponse(new Object());
+                sendResponse([false, true, new Object()]);
             };
             return false;
+        } else if (message.action == "update_whitelist") {
+            if (g_tab_states.has(message.tabid)) {
+                var tab_state = g_tab_states.get(message.tabid);
+                if (message.autoplay_enabled == true) {
+                    g_whitelist.add(tab_state.domain_name);
+                } else if (message.autoplay_enabled == false) {
+                    g_whitelist.delete(tab_state.domain_name);
+                } else {
+                    console.error("background.js: Invalid value for message.autoplay_enabled: " + JSON.stringify(message.autoplay_enabled));
+                    return false;
+                };
+                chrome.tabs.reload(message.tabid);
+            } else {
+                console.error("background.js: update_whitelist: Tab state does not exist");
+                return false;
+            };
         } else {
             console.error("background.js: Unknown message.action received from popup: " + JSON.stringify(message));
             return false;
         };
-    } else if (message.sender == "background") {
-        return false;
     } else {
         console.error("background.js: Invalid message received: " + JSON.stringify(message));
     };
