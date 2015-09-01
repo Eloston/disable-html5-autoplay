@@ -1,51 +1,8 @@
-BROWSER_ACTION_ICON_STATES = {
-    DORMANT: 0,
-    ACTIVE: 1,
-    DORMANT_WHITELISTED: 2,
-    ACTIVE_WHITELISTED: 3
-};
 PERMANENT_WHITELIST = [
     "https://chrome.google.com/webstore"
 ];
 g_whitelist = new Set();
 g_tab_states = new Map();
-g_browser_action_icon_updater = new function() {
-    var self = this;
-
-    self.m_pending = new Map();
-
-    function update_tab_icon(tabId) {
-        if (!g_tab_states.has(tabId)) {
-            return;
-        };
-        if (self.m_pending.get(tabId).pending == BROWSER_ACTION_ICON_STATES.DORMANT) {
-            chrome.browserAction.setIcon({ tabId: tabId, path: { "19": "images/dormant_19.png", "38": "images/dormant_38.png" } });
-        } else if (self.m_pending.get(tabId).pending == BROWSER_ACTION_ICON_STATES.ACTIVE) {
-            chrome.browserAction.setIcon({ tabId: tabId, path: { "19": "images/active_19.png", "38": "images/active_38.png" } });
-        } else {
-            console.error("background.js: Invalid Browser Action icon state: " + self.m_pending.get(tabId).toString());
-            return;
-        };
-        self.m_pending.get(tabId).last_update = performance.now();
-    };
-
-    function run_update_when_ready(tabId) {
-        if (performance.now() - self.m_pending.get(tabId).last_update > 500) {
-            update_tab_icon(tabId);
-        } else {
-            setTimeout(function() { update_tab_icon(tabId); }, performance.now() - self.m_pending.get(tabId).last_update);
-        };
-    };
-
-    self.update_state = function(tabId, state) {
-        if (self.m_pending.has(tabId)) {
-            self.m_pending.get(tabId).pending = state;
-        } else {
-            self.m_pending.set(tabId, { pending: state, last_update: -9001 });
-        };
-        run_update_when_ready(tabId);
-    };
-};
 
 function get_second_level_domain(url_string) {
     var url_parser = document.createElement("a");
@@ -85,17 +42,11 @@ function update_popup(tabid) {
     };
 };
 
-function set_active_icon(tabId) {
-    if (g_tab_states.get(tabId).browser_action_icon_active == false) {
-        g_browser_action_icon_updater.update_state(tabId, BROWSER_ACTION_ICON_STATES.ACTIVE);
-        g_tab_states.get(tabId).browser_action_icon_active = true;
-    };
-};
-
-function set_dormant_icon(tabId) {
-    if (g_tab_states.get(tabId).browser_action_icon_active == true) {
-        g_browser_action_icon_updater.update_state(tabId, BROWSER_ACTION_ICON_STATES.DORMANT);
-        g_tab_states.get(tabId).browser_action_icon_active = false;
+function update_browser_action_icon(tabid, autoplay_enabled) {
+    if (autoplay_enabled) {
+        chrome.browserAction.setIcon({ tabId: tabid, path: { "19": "images/dormant_19.png", "38": "images/dormant_38.png" } });
+    } else {
+        chrome.browserAction.setIcon({ tabId: tabid, path: { "19": "images/active_19.png", "38": "images/active_38.png" } });
     };
 };
 
@@ -112,7 +63,7 @@ chrome.webNavigation.onCommitted.addListener(function(details) {
                 break;
             };
         };
-        g_tab_states.set(details.tabId, { autoplay_enabled: autoplay_enabled, browser_action_icon_active: false, domain_name: domain_name, media_statistics: new Object() });
+        g_tab_states.set(details.tabId, { autoplay_enabled: autoplay_enabled, domain_name: domain_name, media_statistics: new Object() });
     };
     for (whitelisted_url of PERMANENT_WHITELIST) {
         if (details.url.startsWith(whitelisted_url)) {
@@ -122,6 +73,7 @@ chrome.webNavigation.onCommitted.addListener(function(details) {
         };
     };
     update_popup(details.tabId);
+    update_browser_action_icon(details.tabId, g_tab_states.has(details.tabId) && g_tab_states.get(details.tabId).autoplay_enabled);
     if (g_tab_states.has(details.tabId) && !g_tab_states.get(details.tabId).autoplay_enabled) {
         for (filename of ["frame_script.js", "content_script.js"]) {
             chrome.tabs.executeScript(details.tabId, {file: filename, allFrames: true, matchAboutBlank: true, runAt: "document_start"});
@@ -165,20 +117,12 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
             } else {
                 tab_state[message.element_type] = { count: 1, attempts: 0 };
             };
-            set_active_icon(sender.tab.id);
         } else if (message.action == "remove_media_element") {
             if (tab_state.hasOwnProperty(message.element_type)) {
                 tab_state[message.element_type].count = tab_state[message.element_type].count - 1;
                 if (tab_state[message.element_type].count < 0) {
                     tab_state[message.element_type].count = 0;
                 };
-            };
-            var total_count = 0;
-            for (element_type in tab_state) {
-                total_count = total_count + tab_state[element_type].count;
-            };
-            if (total_count == 0) {
-                set_dormant_icon(sender.tab.id);
             };
         } else if (message.action == "add_autoplay_attempts") {
             if (!tab_state.hasOwnProperty(message.element_type)) {
