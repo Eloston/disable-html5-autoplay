@@ -73,9 +73,11 @@ chrome.webNavigation.onCommitted.addListener(function(details) {
         };
     };
     update_popup(details.tabId);
-    update_browser_action_icon(details.tabId, g_tab_states.has(details.tabId) && g_tab_states.get(details.tabId).autoplay_enabled);
+    update_browser_action_icon(details.tabId, !g_tab_states.has(details.tabId) || g_tab_states.get(details.tabId).autoplay_enabled);
     if (g_tab_states.has(details.tabId) && !g_tab_states.get(details.tabId).autoplay_enabled) {
-        chrome.tabs.executeScript(details.tabId, {file: "content_script.js", allFrames: true, matchAboutBlank: true, runAt: "document_start"});
+        chrome.tabs.executeScript(details.tabId, {file: "content_script.js", allFrames: true, matchAboutBlank: true, runAt: "document_start"}, function() {
+            chrome.runtime.lastError; // TODO: Log these errors into a debug log
+        });
     };
 }, { url: [{ schemes: ["http", "https", "file"] }] });
 
