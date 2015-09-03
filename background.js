@@ -44,9 +44,13 @@ function update_popup(tabid) {
 
 function update_browser_action_icon(tabid, autoplay_enabled) {
     if (autoplay_enabled) {
-        chrome.browserAction.setIcon({ tabId: tabid, path: { "19": "images/dormant_19.png", "38": "images/dormant_38.png" } });
+        chrome.browserAction.setIcon({ tabId: tabid, path: { "19": "images/dormant_19.png", "38": "images/dormant_38.png" } }, function() {
+            chrome.runtime.lastError; // TODO: Log these errors into a debug log
+        });
     } else {
-        chrome.browserAction.setIcon({ tabId: tabid, path: { "19": "images/active_19.png", "38": "images/active_38.png" } });
+        chrome.browserAction.setIcon({ tabId: tabid, path: { "19": "images/active_19.png", "38": "images/active_38.png" } }, function() {
+            chrome.runtime.lastError; // TODO: Log these errors into a debug log
+        });
     };
 };
 
