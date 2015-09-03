@@ -75,7 +75,7 @@ function frame_script_code() {
                 element.dispatchEvent(self.pseudo_events.play);
                 element.dispatchEvent(self.pseudo_events.playing);
                 if (element.paused == true) {
-                    setTimeout(function() { element.dispatchEvent(self.pseudo_events.pause); }, 1000);
+                    setTimeout(function() { element.dispatchEvent(self.pseudo_events.pause); }, 100);
                 };
             };
         };
@@ -98,55 +98,58 @@ function frame_script_code() {
 
         var self = this;
 
-        self.early_pause = false;
-        if (!element.paused) {
-            element.pause();
-            record_autoplay_attempt(self);
-            self.early_pause = true;
+        self.can_play = false;
+        self.pending_pausevideo_call = false;
+        self.fully_initialized = false;
+        self.ytinstance = null;
+
+        element.play = function() {
+            if (self.can_play || (self.fully_initialized && self.ytinstance.getPlayerState() == 2)) {
+                self.can_play = true;
+                m_prototype_play.call(element);
+            } else {
+                if (self.fully_initialized) {
+                    setTimeout(function() { self.ytinstance.pauseVideo(); self.can_play = true; }, 0);
+                } else {
+                    self.pending_pausevideo_call = true;
+                };
+            };
         };
 
-        function initialize() {
+        function get_player_or_wait() {
             if (!(yt.player.hasOwnProperty("getPlayerByElement") && (yt.player.getPlayerByElement instanceof Function))) {
-                setTimeout(initialize, 5);
+                setTimeout(get_player_or_wait, 1);
                 return;
             };
 
-            self.m_element = element;
+            self.ytinstance = yt.player.getPlayerByElement(element.parentElement.parentElement.parentElement);
 
-            var ytinstance = yt.player.getPlayerByElement(element.parentElement.parentElement.parentElement);
-
-            var disable_yt_autoplay = function() {
-                ytinstance.removeEventListener("onReady", disable_yt_autoplay);
-                var init_state = ytinstance.getPlayerState();
-
-                if (init_state == 1) {
-                    ytinstance.pauseVideo();
-                    record_autoplay_attempt(self);
-                } else if (self.early_pause == true) {
-                    ytinstance.pauseVideo();
-                };
-                self.should_pause = (init_state == 5) || (init_state == 3) || (init_state == -1);
-                ytinstance.addEventListener("onStateChange", function(new_state) {
-                    if (new_state == -1) {
-                        self.should_pause = true;
-                    } else if ((new_state == 1) && (self.should_pause == true)) {
-                        self.should_pause = false;
-                        ytinstance.pauseVideo();
-                        record_autoplay_attempt(self);
-                    } else if ((new_state == 2) && !element.paused) {
-                        ytinstance.pauseVideo();
+            function run_functions_or_wait() {
+                if ((self.ytinstance.pauseVideo instanceof Function) && (self.ytinstance.addEventListener instanceof Function) && (self.ytinstance.getPlayerState instanceof Function)) {
+                    self.fully_initialized = true;
+                    if (self.ytinstance.getPlayerState() == -1) {
+                        self.ytinstance.playVideo();
+                    } else if (self.pending_pausevideo_call) {
+                        self.ytinstance.playVideo();
+                        self.pending_pausevideo_call = false;
                     };
-                });
+                    self.ytinstance.addEventListener("onStateChange", function(new_state) {
+                        if (new_state == 5 || new_state == 2) {
+                            self.can_play = true;
+                        } else if (new_state == -1) {
+                            self.can_play = false;
+                            self.ytinstance.playVideo();
+                        };
+                    });
+                } else {
+                    setTimeout(run_functions_or_wait, 1);
+                };
             };
 
-            if ("getPlayerState" in ytinstance) {
-                disable_yt_autoplay();
-            } else {
-                ytinstance.addEventListener("onReady", disable_yt_autoplay);
-            };
+            run_functions_or_wait();
         };
 
-        initialize();
+        get_player_or_wait();
 
         self.unregister_element = function() {
         };
@@ -161,8 +164,6 @@ function frame_script_code() {
         };
 
         var self = this;
-
-        self.m_element = element;
 
         if (!element.paused) {
             element.pause();
@@ -208,8 +209,6 @@ function frame_script_code() {
         };
 
         var self = this;
-
-        self.m_element = element;
 
         if (!element.paused) {
             element.pause();
@@ -269,7 +268,7 @@ function frame_script_code() {
                     element.dispatchEvent(self.pseudo_events.play);
                     element.dispatchEvent(self.pseudo_events.playing);
                     if (element.paused == true) {
-                        setTimeout(function() { element.dispatchEvent(self.pseudo_events.pause); }, 1000);
+                        setTimeout(function() { element.dispatchEvent(self.pseudo_events.pause); }, 100);
                     };
                 };
             };
@@ -376,7 +375,7 @@ function frame_script_code() {
             m_undelegated_elements.set(self, 1);
         };
         if (self.hasOwnProperty("pseudo_events")) {
-            if ((self.pseudo_events.play + self.pseudo_events.playing + self.pseudo_events.pause) > Event.NONE) {
+            if ((self.pseudo_events.play.eventPhase + self.pseudo_events.playing.eventPhase + self.pseudo_events.pause.eventPhase) > Event.NONE) {
                 return;
             };
         } else {
@@ -388,7 +387,7 @@ function frame_script_code() {
         };
         self.dispatchEvent(self.pseudo_events.play);
         self.dispatchEvent(self.pseudo_events.playing);
-        setTimeout(function() { self.dispatchEvent(self.pseudo_events.pause); }, 1000);
+        setTimeout(function() { self.dispatchEvent(self.pseudo_events.pause); }, 100);
     };
 
     m_mutation_observer.observe(document, {
