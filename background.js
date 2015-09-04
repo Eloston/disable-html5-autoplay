@@ -67,14 +67,14 @@ chrome.webNavigation.onCommitted.addListener(function(details) {
                 break;
             };
         };
-        g_tab_states.set(details.tabId, { autoplay_enabled: autoplay_enabled, domain_name: domain_name, media_statistics: new Object() });
-    };
-    for (whitelisted_url of PERMANENT_WHITELIST) {
-        if (details.url.startsWith(whitelisted_url)) {
-            g_tab_states.delete(details.tabId);
-            update_popup(details.tabId);
-            return;
+        for (whitelisted_url of PERMANENT_WHITELIST) {
+            if (details.url.startsWith(whitelisted_url)) {
+                update_popup(details.tabId);
+                update_browser_action_icon(details.tabId, true);
+                return;
+            };
         };
+        g_tab_states.set(details.tabId, { autoplay_enabled: autoplay_enabled, domain_name: domain_name, media_statistics: new Object() });
     };
     update_popup(details.tabId);
     update_browser_action_icon(details.tabId, !g_tab_states.has(details.tabId) || g_tab_states.get(details.tabId).autoplay_enabled);
