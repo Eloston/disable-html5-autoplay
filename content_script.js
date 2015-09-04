@@ -116,6 +116,15 @@ function frame_script_code() {
             };
         };
 
+        function on_state_changed_listener(new_state) {
+            if (new_state == 5 || new_state == 2) {
+                self.can_play = true;
+            } else if (new_state == -1) {
+                self.can_play = false;
+                self.ytinstance.playVideo();
+            };
+        };
+
         function get_player_or_wait() {
             if (!(yt.player.hasOwnProperty("getPlayerByElement") && (yt.player.getPlayerByElement instanceof Function))) {
                 setTimeout(get_player_or_wait, 1);
@@ -133,14 +142,7 @@ function frame_script_code() {
                         self.ytinstance.playVideo();
                         self.pending_pausevideo_call = false;
                     };
-                    self.ytinstance.addEventListener("onStateChange", function(new_state) {
-                        if (new_state == 5 || new_state == 2) {
-                            self.can_play = true;
-                        } else if (new_state == -1) {
-                            self.can_play = false;
-                            self.ytinstance.playVideo();
-                        };
-                    });
+                    self.ytinstance.addEventListener("onStateChange", on_state_changed_listener);
                 } else {
                     setTimeout(run_functions_or_wait, 1);
                 };
@@ -152,6 +154,8 @@ function frame_script_code() {
         get_player_or_wait();
 
         self.unregister_element = function() {
+            element.play = m_prototype_play;
+            self.ytinstance.removeEventListener("onStateChange", on_state_changed_listener);
         };
     };
 
