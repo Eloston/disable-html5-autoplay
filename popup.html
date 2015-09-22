@@ -6,11 +6,24 @@
             <div id="extension-name"></div>
             <div id="extension-version"></div>
         </div>
-        <div class="subheading">Toggle Autoplay</div>
+        <div class="subheading">Mode setting</div>
         <center>
-            <input type="checkbox" id="autoplay-toggle" style="width: 5em; height: 5em; margin: 1em 1em 1em 1em;"></input>
+            <p class="text-content">Select what to disable</p>
+            <div id="mode-settings">
+                <!-- TODO: Uncomment when autobuffering is added -->
+                <input id="mode-setting-all" name="mode-setting-option" type="radio"></input>
+                <label for="mode-setting-all">Autoplay & autobuffer</label>
+
+                <input id="mode-setting-autoplay-only" name="mode-setting-option" type="radio"></input>
+                <label for="mode-setting-autoplay-only">Autoplay only</label>
+
+                <input id="mode-setting-none" name="mode-setting-option" type="radio"></input>
+                <label for="mode-setting-none">Nothing</label>
+
+                <span class="slide-button"></span>
+            </div>
         </center>
-        <div id="can-run-is-false">Autoplay cannot be disabled on this page</div>
+        <div id="can-run-is-false">Nothing can be disabled on this page</div>
         <div class="subheading">Totals</div>
         <div class="text-content">
             <span>Media elements: <span id="media-element-count" class="darker-text"></span></span>
@@ -37,13 +50,16 @@
             }
             #click-reload {
                 position: fixed;
-                top: 50%;
+                bottom: 0%;
                 margin: 1em 1em 1em 1em;
                 padding: 1em 1em 1em 1em;
                 white-space: normal;
                 color: #eeeeee;
-                background: rgba(44, 44, 44, 0.8);
+                background: rgba(44, 44, 44, 0.75);
                 border-radius: 0.5em;
+            }
+            #click-reload:hover {
+                background: rgba(44, 44, 44, 1);
             }
             #main-heading {
                 margin: 0;
@@ -84,6 +100,100 @@
             }
             .darker-text {
                 color: #333333;
+            }
+
+            #mode-settings {
+                margin: 1em 1em 1em 1em;
+
+                display: block;
+                position: relative;
+                padding: 0;
+
+                background-color: #2d3035;
+
+                color: #ffffff;
+                font-weight: bold;
+                text-align: center;
+                text-shadow: 1px 1px 1px #191b1e;
+	
+                border-radius: 3px;	
+
+                box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3), 0 1px 0px rgba(255, 255, 255, 0.2);
+            }
+            #mode-settings input {
+                position: absolute;
+                opacity: 0;
+            }
+            #mode-settings label {
+                position: relative;
+                z-index: 2;
+                display: block;
+
+                padding: 0 1em 0 1em;
+                text-align: center;
+
+                /* TODO: Uncomment when autobuffering is added */
+                height: 33.3333333333%;
+                /*height: 50%;*/
+
+                line-height: 3em;
+                vertical-align: middle;
+            }
+            #mode-settings .slide-button {
+                position: absolute;
+                top: 0;
+                left: 0;
+                padding: 0;
+                z-index: 1;
+
+                width: 100%;
+
+                /* TODO: Uncomment when autobuffering is added */
+                height: 33.3333333333%;
+                /*height: 50%;*/
+
+                display: block;
+
+                transition: all 0.2s ease-out;
+
+                border: 1px solid #333333;
+
+                background-color: #70c66b;
+
+                background-image: linear-gradient(top, rgba(255, 255, 255, 0.2), rgba(0, 0, 0, 0));
+
+                box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2), inset 0 1px 1px rgba(255, 255, 255, 0.45);
+
+                border-radius: 3px;
+            }
+            /* TODO: Uncomment when autobuffering is added */
+            
+            #mode-settings input:checked:nth-of-type(2) ~ .slide-button {	
+                top: 33.3333333333%;
+            }
+            
+            #mode-settings input:checked:last-of-type ~ .slide-button {
+                top: 66.6666666666%;
+                /*top: 50%;*/
+                left: 0;
+            }
+            #mode-settings * {
+                box-sizing: border-box;
+            }
+            #mode-settings input:focus + label {
+                outline: 1px dotted #888888;
+            }
+            #mode-settings input:checked + label {
+                color: #333333;
+                text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+            }
+            #mode-settings p {
+                color: #333333;
+
+                text-shadow: none;
+            }
+            #mode-settings span {
+                color: #ffffff;
             }
         </style>
     </head>

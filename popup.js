@@ -25,16 +25,90 @@ function clear_data() {
     };
 };
 
-function set_data(can_run, autoplay_enabled, statistics) {
-    var autoplay_toggle_checkbox = document.getElementById("autoplay-toggle");
+var mode_settings = {
+    get mode() {
+        //opt_all = document.getElementById("mode-setting-all");
+        opt_autoplay = document.getElementById("mode-setting-autoplay-only");
+        opt_none = document.getElementById("mode-setting-none");
+        if (opt_none.checked) {
+            return 0;
+        } else if (opt_autoplay.checked) {
+            return 1;
+        //} else if (opt_all.checked) {
+        //    return 2;
+        } else {
+            console.error("popup.js: mode_settings get mode: No mode is selected");
+        };
+    },
+    set mode(new_mode) {
+        //opt_all = document.getElementById("mode-setting-all");
+        opt_autoplay = document.getElementById("mode-setting-autoplay-only");
+        opt_none = document.getElementById("mode-setting-none");
+        //opt_all.checked = false;
+        opt_autoplay.checked = false;
+        opt_none.checked = false;
+        if (new_mode == 2) {
+            //opt_all.checked = true;
+        } else if (new_mode == 1) {
+            opt_autoplay.checked = true;
+        } else if (new_mode == 0) {
+            opt_none.checked = true;
+        } else {
+            console.error("popup.js: mode_settings set mode: Invalid mode setting: " + JSON.stringify(new_mode));
+        };
+        this.current_mode = new_mode;
+    },
+    current_mode: -1,
+    get disabled() {
+        return document.getElementById("mode-settings").disabled;
+    },
+    set disabled(new_state) {
+        var div_elem = document.getElementById("mode-settings");
+        div_elem.disabled = new_state;
+        for (element of Array.prototype.slice.call(div_elem.children)) {
+            element.disabled = new_state;
+        };
+    },
+    fire_event: function(new_mode) {
+        var click_reload_element = document.getElementById("click-reload");
+        if (new_mode === mode_settings.current_mode) {
+            click_reload_element.setAttribute("hidden", "hidden");
+        } else {
+            click_reload_element.removeAttribute("hidden");
+        };
+    },
+    initialize: function() {
+        document.getElementById("mode-setting-all").addEventListener("change", (function() { this.fire_event(2); }).bind(this));
+        document.getElementById("mode-setting-autoplay-only").addEventListener("change", (function() { this.fire_event(1); }).bind(this));
+        document.getElementById("mode-setting-none").addEventListener("change", (function() { this.fire_event(0); }).bind(this));
+    }
+};
+mode_settings.initialize();
+
+function set_data(reset, can_run, autoplay_enabled, statistics) {
     var media_element_count_element = document.getElementById("media-element-count");
     var autoplay_attempts_element = document.getElementById("autoplay-attempts");
     var statistics_element = document.getElementById("statistics");
-    autoplay_toggle_checkbox.checked = autoplay_enabled;
-    autoplay_toggle_checkbox.disabled = !can_run;
+    mode_settings.disabled = !can_run;
+    if (reset) {
+        if (autoplay_enabled) {
+            mode_settings.mode = 0;
+        } else {
+            mode_settings.mode = 1;
+        };
+    } else {
+        if (autoplay_enabled) {
+            mode_settings.current_mode = 0;
+        } else {
+            mode_settings.current_mode = 1;
+        };
+    };
+    mode_settings.fire_event(mode_settings.mode);
     if (can_run) {
         document.getElementById("can-run-is-false").hidden = "hidden";
-    }
+    } else {
+        document.getElementById("can-run-is-false").removeAttribute("hidden");
+    };
     if (Object.keys(statistics).length > 0) {
         var total_count = 0;
         var total_attempts = 0;
@@ -70,34 +144,21 @@ function set_data(can_run, autoplay_enabled, statistics) {
 };
 
 function initialize_data(response_array) {
-    set_data(response_array[0], response_array[1], response_array[2]);
+    set_data(true, response_array[0], response_array[1], response_array[2]);
 };
 
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     if (message.sender == "background" && message.destination == "popup" && message.action == "update_popup") {
         if (message.tabid == g_tab_id) {
             clear_data();
-            set_data(message.can_run, message.autoplay_enabled, message.statistics);
+            set_data(message.reset, message.can_run, message.autoplay_enabled, message.statistics);
         };
-    };
-});
-
-document.getElementById("autoplay-toggle").addEventListener("mouseup", function(event) {
-    var autoplay_toggle_element = document.getElementById("autoplay-toggle");
-    if (autoplay_toggle_element.disabled === true) {
-        return;
-    };
-    var click_reload_element = document.getElementById("click-reload");
-    if (click_reload_element.hasAttribute("hidden")) {
-        click_reload_element.removeAttribute("hidden");
-    } else {
-        click_reload_element.setAttribute("hidden", "hidden");
     };
 });
 
 document.getElementById("click-reload").addEventListener("mouseup", function(event) {
     document.getElementById("click-reload").setAttribute("hidden", "hidden");
-    send_message({action: "update_whitelist", autoplay_enabled: document.getElementById("autoplay-toggle").checked, tabid: g_tab_id});
+    send_message({action: "update_whitelist", autoplay_enabled: mode_settings.mode == 0, tabid: g_tab_id});
 });
 
 var manifest_details = chrome.runtime.getManifest();
