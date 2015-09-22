@@ -11,7 +11,7 @@ Here are some of its features with some technical details:
 * Prevents unauthorized invocations of the `play()` function via detecting user input events (for media without special code)
   * Fires `play`, `playing`, and `pause` events manually during an unauthorized invocation
 
-To see a list of features to be implemented, check out the [TODO file](https://github.com/Eloston/disable-html5-autoplay/blob/master/TODO) in the repository.
+To see a list of features to be implemented, check out the [Issue Tracker](https://github.com/Eloston/disable-html5-autoplay/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement).
 
 ## Using this extension
 

@@ -1,6 +1,6 @@
-function frame_script_code() {
+function frame_script_code(m_frame_event_name) {
     function send_message(message) {
-        setTimeout(function() { window.dispatchEvent(new CustomEvent("DisableHTML5AutoplayEvent_ToContentScript", { detail: message })); }, 0);
+        setTimeout(function() { window.dispatchEvent(new CustomEvent(m_frame_event_name, { detail: message })); }, 0);
     };
 
     function UserInputEventMonitor() {
@@ -68,20 +68,30 @@ function frame_script_code() {
             pause: new Event("pause")
         };
 
-        element.play = function() {
-            record_autoplay_attempt(self);
-            if ((performance.now() - self.last_call) > 10 && ((self.pseudo_events.play.eventPhase + self.pseudo_events.playing.eventPhase + self.pseudo_events.pause.eventPhase) == Event.NONE)) {
-                self.last_call = performance.now();
-                element.dispatchEvent(self.pseudo_events.play);
-                element.dispatchEvent(self.pseudo_events.playing);
-                if (element.paused == true) {
-                    setTimeout(function() { element.dispatchEvent(self.pseudo_events.pause); }, 100);
+        Object.defineProperty(element, "play", {
+            configurable: true,
+            writable: false,
+            enumerable: true,
+            value: function() {
+                record_autoplay_attempt(self);
+                if ((performance.now() - self.last_call) > 10 && ((self.pseudo_events.play.eventPhase + self.pseudo_events.playing.eventPhase + self.pseudo_events.pause.eventPhase) == Event.NONE)) {
+                    self.last_call = performance.now();
+                    element.dispatchEvent(self.pseudo_events.play);
+                    element.dispatchEvent(self.pseudo_events.playing);
+                    if (element.paused == true) {
+                        setTimeout(function() { element.dispatchEvent(self.pseudo_events.pause); }, 100);
+                    };
                 };
-            };
-        };
+            }
+        });
 
         self.unregister_element = function() {
-            element.play = m_prototype_play;
+            Object.defineProperty(element, "play", {
+                writable: true,
+                configurable: true,
+                enumerable: true,
+                value: HTMLMediaElement.prototype.play
+            });
         };
     };
 
@@ -103,18 +113,23 @@ function frame_script_code() {
         self.fully_initialized = false;
         self.ytinstance = null;
 
-        element.play = function() {
-            if (self.can_play || (self.fully_initialized && self.ytinstance.getPlayerState() == 2)) {
-                self.can_play = true;
-                m_prototype_play.call(element);
-            } else {
-                if (self.fully_initialized) {
-                    setTimeout(function() { self.ytinstance.pauseVideo(); self.can_play = true; }, 0);
+        Object.defineProperty(element, "play", {
+            configurable: true,
+            writable: false,
+            enumerable: true,
+            value: function() {
+                if (self.can_play || (self.fully_initialized && self.ytinstance.getPlayerState() == 2)) {
+                    self.can_play = true;
+                    m_prototype_play.call(element);
                 } else {
-                    self.pending_pausevideo_call = true;
+                    if (self.fully_initialized) {
+                        setTimeout(function() { self.ytinstance.pauseVideo(); self.can_play = true; }, 0);
+                    } else {
+                        self.pending_pausevideo_call = true;
+                    };
                 };
-            };
-        };
+            }
+        });
 
         function on_state_changed_listener(new_state) {
             if (new_state == 5 || new_state == 2) {
@@ -154,7 +169,12 @@ function frame_script_code() {
         get_player_or_wait();
 
         self.unregister_element = function() {
-            element.play = m_prototype_play;
+            Object.defineProperty(element, "play", {
+                writable: true,
+                configurable: true,
+                enumerable: true,
+                value: HTMLMediaElement.prototype.play
+            });
             self.ytinstance.removeEventListener("onStateChange", on_state_changed_listener);
         };
     };
@@ -262,29 +282,44 @@ function frame_script_code() {
             playing: new Event("playing"),
             pause: new Event("pause")
         };
-        element.play = function() {
-            if (m_event_monitor.reached_timeout() == true) {
-                m_prototype_play.call(element);
-            } else {
-                record_autoplay_attempt(self);
-                if ((performance.now() - self.last_call) > 10 && ((self.pseudo_events.play.eventPhase + self.pseudo_events.playing.eventPhase + self.pseudo_events.pause.eventPhase) == Event.NONE)) {
-                    self.last_call = performance.now();
-                    element.dispatchEvent(self.pseudo_events.play);
-                    element.dispatchEvent(self.pseudo_events.playing);
-                    if (element.paused == true) {
-                        setTimeout(function() { element.dispatchEvent(self.pseudo_events.pause); }, 100);
+        Object.defineProperty(element, "play", {
+            configurable: true,
+            writable: false,
+            enumerable: true,
+            value: function() {
+                if (m_event_monitor.reached_timeout() == true) {
+                    m_prototype_play.call(element);
+                } else {
+                    record_autoplay_attempt(self);
+                    if ((performance.now() - self.last_call) > 10 && ((self.pseudo_events.play.eventPhase + self.pseudo_events.playing.eventPhase + self.pseudo_events.pause.eventPhase) == Event.NONE)) {
+                        self.last_call = performance.now();
+                        element.dispatchEvent(self.pseudo_events.play);
+                        element.dispatchEvent(self.pseudo_events.playing);
+                        if (element.paused == true) {
+                            setTimeout(function() { element.dispatchEvent(self.pseudo_events.pause); }, 100);
+                        };
                     };
                 };
-            };
-        };
+            }
+        });
 
         self.unregister_element = function() {
-            element.play = m_prototype_play;
+            Object.defineProperty(element, "play", {
+                writable: true,
+                configurable: true,
+                enumerable: true,
+                value: HTMLMediaElement.prototype.play
+            });
         };
     };
 
     function add_regular_play(element, delegate_type) { // TODO: Move this into BaseDelegate constructor
-        element.play = m_prototype_play;
+        Object.defineProperty(element, "play", {
+            configurable: true,
+            writable: false,
+            enumerable: true,
+            value: m_prototype_play
+        });
         if (m_undelegated_elements.has(element)) {
             send_message({ action: "add_autoplay_attempts", element_type: DELEGATE_NAMES[DELEGATE_TYPES.indexOf(delegate_type)], count: m_undelegated_elements.get(element) });
             m_undelegated_elements.delete(element);
@@ -368,31 +403,36 @@ function frame_script_code() {
     });
     var m_undelegated_elements = new Map();
     var m_prototype_play = HTMLMediaElement.prototype.play
-    HTMLMediaElement.prototype.play = function() {
-        var self = this;
-        if (m_undelegated_elements.has(self)) {
-            m_undelegated_elements.get(self) += 1;
-            if (m_undelegated_elements.get(self) > 10) {
-                return;
+    Object.defineProperty(HTMLMediaElement.prototype, "play", {
+        writable: false,
+        configurable: false,
+        enumerable: true,
+        value: function() {
+            var self = this;
+            if (m_undelegated_elements.has(self)) {
+                m_undelegated_elements.get(self) += 1;
+                if (m_undelegated_elements.get(self) > 10) {
+                    return;
+                };
+            } else {
+                m_undelegated_elements.set(self, 1);
             };
-        } else {
-            m_undelegated_elements.set(self, 1);
-        };
-        if (self.hasOwnProperty("pseudo_events")) {
-            if ((self.pseudo_events.play.eventPhase + self.pseudo_events.playing.eventPhase + self.pseudo_events.pause.eventPhase) > Event.NONE) {
-                return;
+            if (self.hasOwnProperty("pseudo_events")) {
+                if ((self.pseudo_events.play.eventPhase + self.pseudo_events.playing.eventPhase + self.pseudo_events.pause.eventPhase) > Event.NONE) {
+                    return;
+                };
+            } else {
+                self.pseudo_events = {
+                    play: new Event("play"),
+                    playing: new Event("playing"),
+                    pause: new Event("pause")
+                };
             };
-        } else {
-            self.pseudo_events = {
-                play: new Event("play"),
-                playing: new Event("playing"),
-                pause: new Event("pause")
-            };
-        };
-        self.dispatchEvent(self.pseudo_events.play);
-        self.dispatchEvent(self.pseudo_events.playing);
-        setTimeout(function() { self.dispatchEvent(self.pseudo_events.pause); }, 100);
-    };
+            self.dispatchEvent(self.pseudo_events.play);
+            self.dispatchEvent(self.pseudo_events.playing);
+            setTimeout(function() { self.dispatchEvent(self.pseudo_events.pause); }, 100);
+        }
+    });
 
     m_mutation_observer.observe(document, {
         childList: true,
@@ -416,16 +456,18 @@ function initialize_content_script() {
             chrome.runtime.sendMessage(customEventInit.detail);
         };
 
-        window.addEventListener("DisableHTML5AutoplayEvent_ToContentScript", forward_message);
+        var frame_event_name = "DH5A" + Math.random().toString(36).slice(2);
+
+        window.addEventListener(frame_event_name, forward_message);
 
         document_observer = new MutationObserver(function(mutation_records) {
-            window.addEventListener("DisableHTML5AutoplayEvent_ToContentScript", forward_message);
+            window.addEventListener(frame_event_name, forward_message);
         });
 
         document_observer.observe(document, { childList: true });
 
         var frame_script_element = document.createElement("script");
-        frame_script_element.textContent = "(" + frame_script_code.toString() + ")();";
+        frame_script_element.textContent = "(" + frame_script_code.toString() + ")('" + frame_event_name + "');";
         if (document.documentElement === null) {
             document.appendChild(frame_script_element);
             document.removeChild(frame_script_element);

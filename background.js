@@ -17,13 +17,14 @@ function send_tab_message(tabid, message, options) {
     chrome.tabs.sendMessage(tabid, message, options);
 };
 
-function update_popup(tabid) {
+function update_popup(tabid, reset) {
     if (g_tab_states.has(tabid)) {
         var tab_state = g_tab_states.get(tabid);
         chrome.runtime.sendMessage({
             sender: "background",
             destination: "popup",
             action: "update_popup",
+            reset: reset,
             can_run: true,
             tabid: tabid,
             autoplay_enabled: tab_state.autoplay_enabled,
@@ -34,6 +35,7 @@ function update_popup(tabid) {
             sender: "background",
             destination: "popup",
             action: "update_popup",
+            reset: reset,
             can_run: false,
             tabid: tabid,
             autoplay_enabled: true,
@@ -54,6 +56,14 @@ function update_browser_action_icon(tabid, autoplay_enabled) {
     };
 };
 
+chrome.webNavigation.onBeforeNavigate.addListener(function(details) {
+    if (details.frameId == 0) {
+        g_tab_states.delete(details.tabId);
+        update_popup(details.tabId, true);
+        update_browser_action_icon(details.tabId, true);
+    };
+}, { url: [{ schemes: ["chrome", "ftp"] }] });
+
 chrome.webNavigation.onCommitted.addListener(function(details) {
     if (details.frameId == 0) {
         if (g_tab_states.has(details.tabId)) {
@@ -69,14 +79,14 @@ chrome.webNavigation.onCommitted.addListener(function(details) {
         };
         for (whitelisted_url of PERMANENT_WHITELIST) {
             if (details.url.startsWith(whitelisted_url)) {
-                update_popup(details.tabId);
+                update_popup(details.tabId, true);
                 update_browser_action_icon(details.tabId, true);
                 return;
             };
         };
         g_tab_states.set(details.tabId, { autoplay_enabled: autoplay_enabled, domain_name: domain_name, media_statistics: new Object() });
+        update_popup(details.tabId, true);
     };
-    update_popup(details.tabId);
     update_browser_action_icon(details.tabId, !g_tab_states.has(details.tabId) || g_tab_states.get(details.tabId).autoplay_enabled);
     if (g_tab_states.has(details.tabId) && !g_tab_states.get(details.tabId).autoplay_enabled) {
         chrome.tabs.executeScript(details.tabId, {file: "content_script.js", allFrames: true, matchAboutBlank: true, runAt: "document_start"}, function() {
@@ -142,7 +152,7 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
             console.error("background.js: Unknown message.action received from frame: " + JSON.stringify(message));
             return false;
         };
-        update_popup(sender.tab.id);
+        update_popup(sender.tab.id, false);
     } else if (!("tab" in sender) && (message.sender == "popup")) {
         if (message.action == "initialize_popup") {
             if (g_tab_states.has(message.tabid)) {
