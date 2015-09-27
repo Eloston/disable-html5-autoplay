@@ -333,7 +333,7 @@ function frame_script_code(m_frame_event_name) {
                 m_elements.get(media_element).autoplay_removal_count = 0;
             };
             if ((media_element.autoplay == true) && (m_elements.get(media_element).autoplay_removal_count <= 10)) {
-                m_elements.get(media_element).autoplay_removal_count += 1;
+                m_elements.get(media_element).autoplay_removal_count = m_elements.get(media_element).autoplay_removal_count + 1;
                 media_element.autoplay = false;
                 media_element.pause();
                 send_message({ action: "add_autoplay_attempts", element_type: DELEGATE_NAMES[DELEGATE_TYPES.indexOf(UnknownDelegate)], count: 1 });
@@ -410,13 +410,14 @@ function frame_script_code(m_frame_event_name) {
         value: function() {
             var self = this;
             if (m_undelegated_elements.has(self)) {
-                m_undelegated_elements.get(self) += 1;
+                m_undelegated_elements.set(self, m_undelegated_elements.get(self) + 1);
                 if (m_undelegated_elements.get(self) > 10) {
                     return;
                 };
             } else {
                 m_undelegated_elements.set(self, 1);
             };
+            // TODO: Move event firing into delegate initialization. Some media players work better if no events are fired (espeically the pause event)
             if (self.hasOwnProperty("pseudo_events")) {
                 if ((self.pseudo_events.play.eventPhase + self.pseudo_events.playing.eventPhase + self.pseudo_events.pause.eventPhase) > Event.NONE) {
                     return;

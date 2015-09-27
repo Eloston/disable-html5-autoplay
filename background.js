@@ -62,7 +62,7 @@ chrome.webNavigation.onBeforeNavigate.addListener(function(details) {
         update_popup(details.tabId, true);
         update_browser_action_icon(details.tabId, true);
     };
-}, { url: [{ schemes: ["chrome", "ftp"] }] });
+}, { url: [{ urlPrefix: "chrome" }, { schemes: ["ftp"] }] });
 
 chrome.webNavigation.onCommitted.addListener(function(details) {
     if (details.frameId == 0) {
@@ -86,14 +86,21 @@ chrome.webNavigation.onCommitted.addListener(function(details) {
         };
         g_tab_states.set(details.tabId, { autoplay_enabled: autoplay_enabled, domain_name: domain_name, media_statistics: new Object() });
         update_popup(details.tabId, true);
+        update_browser_action_icon(details.tabId, !g_tab_states.has(details.tabId) || g_tab_states.get(details.tabId).autoplay_enabled);
     };
-    update_browser_action_icon(details.tabId, !g_tab_states.has(details.tabId) || g_tab_states.get(details.tabId).autoplay_enabled);
     if (g_tab_states.has(details.tabId) && !g_tab_states.get(details.tabId).autoplay_enabled) {
         chrome.tabs.executeScript(details.tabId, {file: "content_script.js", allFrames: true, matchAboutBlank: true, runAt: "document_start"}, function() {
             chrome.runtime.lastError; // TODO: Log these errors into a debug log
         });
     };
 }, { url: [{ schemes: ["http", "https", "file"] }] });
+
+chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+    if (g_tab_states.has(tabId) && changeInfo.status === "complete") {
+        // A tab's browser action icon is reset when a tab enters the complete state
+        update_browser_action_icon(tabId, g_tab_states.get(tabId).autoplay_enabled);
+    };
+});
 
 chrome.tabs.onRemoved.addListener(function(tabId, removeInfo) {
     if (g_tab_states.has(tabId)) {

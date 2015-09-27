@@ -25,6 +25,19 @@ function clear_data() {
     };
 };
 
+function update_click_reload_position(click_reload_element) {
+    // TODO: There has to be a better way to make elements stick to the bottom of pages than using JavaScript hacks
+    var click_reload_element = click_reload_element || document.getElementById("click-reload");
+    if (click_reload_element.hasAttribute("hidden")) {
+        return;
+    };
+    click_reload_element.style.top = 0;
+    var content_height = Math.max(document.documentElement.scrollHeight, document.documentElement.offsetHeight, document.documentElement.clientHeight, document.body.scrollHeight, document.body.offsetHeight, document.body.clientHeight);
+    var click_reload_element_current_style = getComputedStyle(click_reload_element);
+    var full_element_height = click_reload_element.getBoundingClientRect().height + parseInt(click_reload_element_current_style.marginTop, 10) + parseInt(click_reload_element_current_style.marginBottom, 10);
+    click_reload_element.style.top = (content_height - full_element_height).toString() + "px";
+};
+
 var mode_settings = {
     get mode() {
         //opt_all = document.getElementById("mode-setting-all");
@@ -64,9 +77,19 @@ var mode_settings = {
     },
     set disabled(new_state) {
         var div_elem = document.getElementById("mode-settings");
+        if (new_state) {
+            div_elem.setAttribute("disabled", "disabled");
+        } else {
+            div_elem.removeAttribute("disabled");
+        };
         div_elem.disabled = new_state;
         for (element of Array.prototype.slice.call(div_elem.children)) {
-            element.disabled = new_state;
+            element.disabled = new_state
+            if (new_state) {
+                element.setAttribute("disabled", "disabled");
+            } else {
+                element.removeAttribute("disabled");
+            };
         };
     },
     fire_event: function(new_mode) {
@@ -75,10 +98,11 @@ var mode_settings = {
             click_reload_element.setAttribute("hidden", "hidden");
         } else {
             click_reload_element.removeAttribute("hidden");
+            update_click_reload_position(click_reload_element);
         };
     },
     initialize: function() {
-        document.getElementById("mode-setting-all").addEventListener("change", (function() { this.fire_event(2); }).bind(this));
+        //document.getElementById("mode-setting-all").addEventListener("change", (function() { this.fire_event(2); }).bind(this));
         document.getElementById("mode-setting-autoplay-only").addEventListener("change", (function() { this.fire_event(1); }).bind(this));
         document.getElementById("mode-setting-none").addEventListener("change", (function() { this.fire_event(0); }).bind(this));
     }
@@ -152,6 +176,7 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
         if (message.tabid == g_tab_id) {
             clear_data();
             set_data(message.reset, message.can_run, message.autoplay_enabled, message.statistics);
+            update_click_reload_position();
         };
     };
 });
