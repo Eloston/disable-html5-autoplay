@@ -23,7 +23,7 @@ This extension creates an icon next to the address bar (which is called a Browse
 * The number that appears over the icon is the number of autoplay attempts.
 
 When the Browser Action is clicked, a popup will appear with the following:
-* A checkbox to toggle autoplay for the current page's second-level domain. When unchecked, autoplay is disabled. When checked, autoplay is enabled.
+* A toggle switch to set the extension's mode for the current page's domain. The current mode is shown in the green box.
 * A section displaying the total number of autoplay attempts and the total number of media elements
 * A section with the number of media elements and the number of autoplay attempts for each media player type.
 
