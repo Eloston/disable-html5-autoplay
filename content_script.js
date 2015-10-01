@@ -3,7 +3,7 @@ function frame_script_code(m_frame_event_name) {
         setTimeout(function() { window.dispatchEvent(new CustomEvent(m_frame_event_name, { detail: message })); }, 0);
     };
 
-    function UserInputEventMonitor() {
+    function UserInputEventMonitor() { // Records the time of the latest user input event. Workaround for determining whether play() calls are from the user or not
         var self = this;
 
         function input_callback(event) {
@@ -16,6 +16,7 @@ function frame_script_code(m_frame_event_name) {
             };
         };
         init_handlers();
+        // In the case of running in an iframe: When the contents of the current iframe are set, event listeners are removed
         var document_observer = new MutationObserver(function(mutation_records) {
             init_handlers();
         });
@@ -25,10 +26,9 @@ function frame_script_code(m_frame_event_name) {
             return (performance.now() - self.last_event) < TIMEOUT;
         };
 
-        var TIMEOUT = 1500;
+        var TIMEOUT = 1500; // TODO: Make this configurable
 
         self.last_event = -2000;
-        self.configured = false;
     };
 
     function update_media_element_count(delegate_constructor, should_add) { // TODO: Move to BaseDelegate class
@@ -49,7 +49,7 @@ function frame_script_code(m_frame_event_name) {
         send_message({ action: "add_autoplay_attempts", element_type: DELEGATE_NAMES[DELEGATE_TYPES.indexOf(delegate_obj.constructor)], count: 1 });
     };
 
-    function BrowserControlsDelegate(element, check_type_matches) {
+    function BrowserControlsDelegate(element, check_type_matches) { // Delegate that handles media with native browser controls
         if (check_type_matches == true) {
             return (element.controls == true);
         };
@@ -95,7 +95,7 @@ function frame_script_code(m_frame_event_name) {
         };
     };
 
-    function YouTubeDelegate(element, check_type_matches) {
+    function YouTubeDelegate(element, check_type_matches) { // Delegate that handles YouTube media
         if (check_type_matches == true) {
             if (element.classList.contains("html5-main-video") && element.parentElement.classList.contains("html5-video-container")) {
                 var root_player_id = element.parentElement.parentElement.parentElement.id;
@@ -179,7 +179,7 @@ function frame_script_code(m_frame_event_name) {
         };
     };
 
-    function VideojsDelegate(element, check_type_matches) {
+    function VideojsDelegate(element, check_type_matches) { // Delegate that handles Video.js media
         if (check_type_matches == true) {
             if (element.classList.contains("vjs-tech") == true) {
                 return element.parentElement.classList.contains("video-js") && window.hasOwnProperty("videojs");
@@ -227,7 +227,7 @@ function frame_script_code(m_frame_event_name) {
         };
     };
 
-    function JWPlayerDelegate(element, check_type_matches) {
+    function JWPlayerDelegate(element, check_type_matches) { // Delegate that handles JWPlayer media
         if (check_type_matches == true) {
             return (element.classList.contains("jw-video") && element.parentElement.classList.contains("jw-media") && element.parentElement.parentElement.classList.contains("jwplayer") && window.hasOwnProperty("jwplayer"));
         };
@@ -264,7 +264,7 @@ function frame_script_code(m_frame_event_name) {
         };
     };
 
-    function UnknownDelegate(element, check_type_matches) {
+    function UnknownDelegate(element, check_type_matches) { // Delegate that is used for any other media in the DOM
         if (check_type_matches == true) {
             return true;
         };
@@ -411,27 +411,9 @@ function frame_script_code(m_frame_event_name) {
             var self = this;
             if (m_undelegated_elements.has(self)) {
                 m_undelegated_elements.set(self, m_undelegated_elements.get(self) + 1);
-                if (m_undelegated_elements.get(self) > 10) {
-                    return;
-                };
             } else {
                 m_undelegated_elements.set(self, 1);
             };
-            // TODO: Move event firing into delegate initialization. Some media players work better if no events are fired (espeically the pause event)
-            if (self.hasOwnProperty("pseudo_events")) {
-                if ((self.pseudo_events.play.eventPhase + self.pseudo_events.playing.eventPhase + self.pseudo_events.pause.eventPhase) > Event.NONE) {
-                    return;
-                };
-            } else {
-                self.pseudo_events = {
-                    play: new Event("play"),
-                    playing: new Event("playing"),
-                    pause: new Event("pause")
-                };
-            };
-            self.dispatchEvent(self.pseudo_events.play);
-            self.dispatchEvent(self.pseudo_events.playing);
-            setTimeout(function() { self.dispatchEvent(self.pseudo_events.pause); }, 100);
         }
     });
 
@@ -457,19 +439,20 @@ function initialize_content_script() {
             chrome.runtime.sendMessage(customEventInit.detail);
         };
 
-        var frame_event_name = "DH5A" + Math.random().toString(36).slice(2);
+        var frame_event_name = "DH5A" + Math.random().toString(36).slice(2); // Random event name for communication obfuscation
 
         window.addEventListener(frame_event_name, forward_message);
 
+        // In the case of running in an iframe: When the contents of the current iframe are set, event listeners are removed
         document_observer = new MutationObserver(function(mutation_records) {
             window.addEventListener(frame_event_name, forward_message);
         });
-
         document_observer.observe(document, { childList: true });
 
+        // Frame script serialization and synchronous injection
         var frame_script_element = document.createElement("script");
         frame_script_element.textContent = "(" + frame_script_code.toString() + ")('" + frame_event_name + "');";
-        if (document.documentElement === null) {
+        if (document.documentElement === null) { // In the case of running in an iframe: The contents may not have been set yet
             document.appendChild(frame_script_element);
             document.removeChild(frame_script_element);
         } else {

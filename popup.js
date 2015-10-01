@@ -26,7 +26,7 @@ function clear_data() {
 };
 
 function update_click_reload_position(click_reload_element) {
-    // TODO: There has to be a better way to make elements stick to the bottom of pages than using JavaScript hacks
+    // TODO: There has to be a better way to make elements stick to the bottom of pages than using JavaScript hacks when the whole popup isn't rendered all at once
     var click_reload_element = click_reload_element || document.getElementById("click-reload");
     if (click_reload_element.hasAttribute("hidden")) {
         return;

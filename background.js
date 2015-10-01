@@ -1,5 +1,5 @@
 PERMANENT_WHITELIST = [
-    "https://chrome.google.com/webstore"
+    "https://chrome.google.com/webstore" // Chrome won't allow content scripts here
 ];
 g_whitelist = new Set();
 g_tab_states = new Map();
@@ -56,7 +56,7 @@ function update_browser_action_icon(tabid, autoplay_enabled) {
     };
 };
 
-chrome.webNavigation.onBeforeNavigate.addListener(function(details) {
+chrome.webNavigation.onBeforeNavigate.addListener(function(details) { // Update the browser action icon when navigating to these pages
     if (details.frameId == 0) {
         g_tab_states.delete(details.tabId);
         update_popup(details.tabId, true);
