@@ -153,7 +153,7 @@ function frame_script_code(m_frame_event_name) {
                     setTimeout(function() { stop_autoplay(); }, 0);
                 } else {
                     video_emptied = false;
-                    video_load_waiting = false;
+                    video_load_waiting = false; // It's possible that video_load_waiting won't become false if the user clicks away before play() is called.
                     if (init_time > 0) {
                         ytapi.seekTo(init_time);
                         init_time = -1;
@@ -168,8 +168,6 @@ function frame_script_code(m_frame_event_name) {
             writable: false,
             enumerable: true,
             value: function() {
-                console.log("LOAD");
-                console.log(element);
                 if (video_emptied && !video_load_waiting) {
                     setTimeout(function() { stop_autoplay(); }, 0);
                 } else if (element.src === "") {
