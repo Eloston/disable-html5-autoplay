@@ -11,7 +11,7 @@ function frame_script_code(m_frame_event_name) {
         };
 
         function init_handlers() {
-            for (event_type of ["keydown", "keyup", "mousedown", "mouseup"]) {
+            for (event_type of ["keydown", "keyup", "mousedown", "mouseup", "touchstart", "touchend"]) {
                 window.addEventListener(event_type, input_callback, true);
             };
         };
@@ -108,74 +108,97 @@ function frame_script_code(m_frame_event_name) {
 
         var self = this;
 
-        self.can_play = false;
-        self.pending_pausevideo_call = false;
-        self.fully_initialized = false;
-        self.ytinstance = null;
+        var autobuffering = true; // TODO: Get this value from frame script initialization arguments
+
+        var ytapi = element.parentElement.parentElement;
+        var init_time = -1;
+        var video_emptied = true;
+        var video_load_waiting = false; // Only used when autobuffering == false
+
+        function stop_autoplay() {
+            if (autobuffering) {
+                ytapi.pauseVideo();
+            } else {
+                init_time = ytapi.getCurrentTime();
+                ytapi.cueVideoByPlayerVars(ytapi.getVideoData());
+                video_emptied = false;
+            };
+        };
+
+        function user_input_callback() {
+            for (event_name of ["mouseup", "keyup", "touchend"]) {
+                ytapi.parentElement.removeEventListener(event_name, user_input_callback, true);
+            };
+            if (autobuffering) {
+                video_emptied = false;
+            } else {
+                video_load_waiting = true;
+            };
+        };
+
+        function add_user_input_listeners() {
+            for (event_name of ["mouseup", "keyup", "touchend"]) {
+                ytapi.parentElement.addEventListener(event_name, user_input_callback, true);
+            };
+        };
+
+        add_user_input_listeners();
 
         Object.defineProperty(element, "play", {
             configurable: true,
             writable: false,
             enumerable: true,
             value: function() {
-                if (self.can_play || (self.fully_initialized && self.ytinstance.getPlayerState() == 2)) {
-                    self.can_play = true;
-                    m_prototype_play.call(element);
+                if (video_emptied && autobuffering) {
+                    setTimeout(function() { stop_autoplay(); }, 0);
                 } else {
-                    if (self.fully_initialized) {
-                        setTimeout(function() { self.ytinstance.pauseVideo(); self.can_play = true; }, 0);
-                    } else {
-                        self.pending_pausevideo_call = true;
+                    video_emptied = false;
+                    video_load_waiting = false;
+                    if (init_time > 0) {
+                        ytapi.seekTo(init_time);
+                        init_time = -1;
                     };
+                    m_prototype_play.call(element);
                 };
             }
         });
 
-        function on_state_changed_listener(new_state) {
-            if (new_state == 5 || new_state == 2) {
-                self.can_play = true;
-            } else if (new_state == -1) {
-                self.can_play = false;
-                self.ytinstance.playVideo();
-            };
-        };
-
-        function get_player_or_wait() {
-            if (!(yt.player.hasOwnProperty("getPlayerByElement") && (yt.player.getPlayerByElement instanceof Function))) {
-                setTimeout(get_player_or_wait, 1);
-                return;
-            };
-
-            self.ytinstance = yt.player.getPlayerByElement(element.parentElement.parentElement.parentElement);
-
-            function run_functions_or_wait() {
-                if ((self.ytinstance.pauseVideo instanceof Function) && (self.ytinstance.addEventListener instanceof Function) && (self.ytinstance.getPlayerState instanceof Function)) {
-                    self.fully_initialized = true;
-                    if (self.ytinstance.getPlayerState() == -1) {
-                        self.ytinstance.playVideo();
-                    } else if (self.pending_pausevideo_call) {
-                        self.ytinstance.playVideo();
-                        self.pending_pausevideo_call = false;
-                    };
-                    self.ytinstance.addEventListener("onStateChange", on_state_changed_listener);
+        Object.defineProperty(element, "load", {
+            configurable: true,
+            writable: false,
+            enumerable: true,
+            value: function() {
+                console.log("LOAD");
+                console.log(element);
+                if (video_emptied && !video_load_waiting) {
+                    setTimeout(function() { stop_autoplay(); }, 0);
+                } else if (element.src === "") {
+                    video_emptied = true;
+                    add_user_input_listeners();
                 } else {
-                    setTimeout(run_functions_or_wait, 1);
+                    m_prototype_load.call(element);
                 };
-            };
+            }
+        });
 
-            run_functions_or_wait();
-        };
-
-        get_player_or_wait();
+        stop_autoplay();
 
         self.unregister_element = function() {
+            for (event_name of ["mouseup", "keyup", "touchend"]) {
+                ytapi.parentElement.removeEventListener(event_name, user_input_callback, true);
+            };
             Object.defineProperty(element, "play", {
                 writable: true,
                 configurable: true,
                 enumerable: true,
                 value: HTMLMediaElement.prototype.play
             });
-            self.ytinstance.removeEventListener("onStateChange", on_state_changed_listener);
+            Object.defineProperty(element, "load", {
+                writable: true,
+                configurable: true,
+                enumerable: true,
+                value: HTMLMediaElement.prototype.load
+            });
         };
     };
 
@@ -211,7 +234,7 @@ function frame_script_code(m_frame_event_name) {
                 self.last_event = performance.now();
             };
 
-            for (event_type of ["keydown", "keyup", "mousedown", "mouseup"]) {
+            for (event_type of ["keydown", "keyup", "mousedown", "mouseup", "touchstart", "touchend"]) {
                 window.addEventListener(event_type, input_callback, true);
             };
 
@@ -402,7 +425,8 @@ function frame_script_code(m_frame_event_name) {
         };
     });
     var m_undelegated_elements = new Map();
-    var m_prototype_play = HTMLMediaElement.prototype.play
+    var m_prototype_play = HTMLMediaElement.prototype.play;
+    var m_prototype_load = HTMLMediaElement.prototype.load;
     Object.defineProperty(HTMLMediaElement.prototype, "play", {
         writable: false,
         configurable: false,
