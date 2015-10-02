@@ -158,7 +158,7 @@ function frame_script_code(m_frame_event_name) {
                         ytapi.seekTo(init_time);
                         init_time = -1;
                     };
-                    m_prototype_play.call(element);
+                    m_prototype_play.call(this);
                 };
             }
         });
@@ -170,12 +170,17 @@ function frame_script_code(m_frame_event_name) {
             value: function() {
                 if (video_emptied && !video_load_waiting) {
                     setTimeout(function() { stop_autoplay(); }, 0);
-                } else if (element.src === "") {
+                    if (!autobuffering) {
+                        return;
+                    };
+                } else if (element.src.length === 0) {
                     video_emptied = true;
                     add_user_input_listeners();
-                } else {
-                    m_prototype_load.call(element);
+                    if (!autobuffering) {
+                        return;
+                    };
                 };
+                m_prototype_load.call(this);
             }
         });
 
@@ -309,7 +314,7 @@ function frame_script_code(m_frame_event_name) {
             enumerable: true,
             value: function() {
                 if (m_event_monitor.reached_timeout() == true) {
-                    m_prototype_play.call(element);
+                    m_prototype_play.call(this);
                 } else {
                     record_autoplay_attempt(self);
                     if ((performance.now() - self.last_call) > 10 && ((self.pseudo_events.play.eventPhase + self.pseudo_events.playing.eventPhase + self.pseudo_events.pause.eventPhase) == Event.NONE)) {
