@@ -180,9 +180,15 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
                     console.error("background.js: Invalid value for message.autoplay_enabled: " + JSON.stringify(message.autoplay_enabled));
                     return false;
                 };
-                chrome.tabs.reload(message.tabid);
             } else {
                 console.error("background.js: update_whitelist: Tab state does not exist");
+                return false;
+            };
+        } else if (message.action == "reload_page") {
+            if (g_tab_states.has(message.tabid)) {
+                chrome.tabs.reload(message.tabid);
+            } else {
+                console.error("background.js: reload_page: Tab state does not exist");
                 return false;
             };
         } else {

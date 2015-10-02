@@ -100,6 +100,9 @@ var mode_settings = {
             click_reload_element.removeAttribute("hidden");
             update_click_reload_position(click_reload_element);
         };
+        if (!this.disabled) {
+            send_message({action: "update_whitelist", autoplay_enabled: mode_settings.mode == 0, tabid: g_tab_id});
+        };
     },
     initialize: function() {
         //document.getElementById("mode-setting-all").addEventListener("change", (function() { this.fire_event(2); }).bind(this));
@@ -171,6 +174,11 @@ function initialize_data(response_array) {
     set_data(true, response_array[0], response_array[1], response_array[2]);
 };
 
+function reload_page_callback() {
+    document.getElementById("click-reload").setAttribute("hidden", "hidden");
+    send_message({action: "reload_page", tabid: g_tab_id});
+};
+
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     if (message.sender == "background" && message.destination == "popup" && message.action == "update_popup") {
         if (message.tabid == g_tab_id) {
@@ -181,10 +189,9 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     };
 });
 
-document.getElementById("click-reload").addEventListener("mouseup", function(event) {
-    document.getElementById("click-reload").setAttribute("hidden", "hidden");
-    send_message({action: "update_whitelist", autoplay_enabled: mode_settings.mode == 0, tabid: g_tab_id});
-});
+for (event_name of ["mouseup", "touchend"]) {
+    document.getElementById("click-reload").addEventListener(event_name, reload_page_callback);
+};
 
 var manifest_details = chrome.runtime.getManifest();
 document.getElementById("extension-name").appendChild(document.createTextNode(manifest_details.name));
