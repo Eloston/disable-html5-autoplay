@@ -11,8 +11,6 @@ Here are some of its features with some technical details:
 * Prevents unauthorized invocations of the `play()` function via detecting user input events (for media without special code)
   * Fires `play`, `playing`, and `pause` events manually during an unauthorized invocation
 
-To see a list of features to be implemented, check out the [Issue Tracker](https://github.com/Eloston/disable-html5-autoplay/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement).
-
 ## Using this extension
 
 After installation, the extension will function on all new tabs.
@@ -41,7 +39,7 @@ Currently, only Chrome/Chromium and Opera are supported. Firefox will be support
 * [Opera Addons page](https://addons.opera.com/en/extensions/details/disable-html5-autoplay/)
 * [Opera Addons NEX download link (for advanced users)](https://addons.opera.com/extensions/download/disable-html5-autoplay/)
 
-### Install from source
+### Install from source (All supported browsers)
 
 1. Download and unpack the source code:
   * [Tagged versions](https://github.com/Eloston/disable-html5-autoplay/releases)
@@ -49,3 +47,18 @@ Currently, only Chrome/Chromium and Opera are supported. Firefox will be support
 2. In `chrome://extensions/`, enable Developer mode
 3. Use "Load unpacked extension..." and select the folder containing the extension source code
 
+## Project Status and News
+
+This extension is still in its relatively early stages (see the [Issue Tracker](https://github.com/Eloston/disable-html5-autoplay/issues) for more information.)
+
+As of now (October 2015), I do not have much spare time to work on the extension. This should change by December 2015.
+
+## Contributing
+
+Until the extension matures more, I will generally not accept pull requests. The exceptions are new or improved media player delegates, UI tweaks, and minor changes to any other part of the extension (i.e. they do not make changes to the structure of the code.)
+
+Please leave any problems, suggestions, or questions in the [Issue Tracker](https://github.com/Eloston/disable-html5-autoplay/issues).
+
+## License
+
+[Read the LICENSE file for more information](LICENSE)

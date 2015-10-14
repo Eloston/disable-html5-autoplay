@@ -100,7 +100,7 @@ function frame_script_code(m_frame_event_name) {
             if (element.classList.contains("html5-main-video") && element.parentElement.classList.contains("html5-video-container")) {
                 var root_player_id = element.parentElement.parentElement.parentElement.id;
                 if (((root_player_id == "player-api") || (root_player_id == "upsell-video") || (root_player_id == "player")) && window.hasOwnProperty("yt")) {
-                    return yt.hasOwnProperty("player");
+                    return yt.hasOwnProperty("config_");
                 };
             };
             return false;
@@ -112,16 +112,17 @@ function frame_script_code(m_frame_event_name) {
 
         var ytapi = element.parentElement.parentElement;
         var init_time = -1;
-        var video_emptied = true;
-        var video_load_waiting = false; // Only used when autobuffering == false
+        var play_authorized = false; // Whether the play() function can be invoked or not.
+        var play_pending = false; // Whether we are waiting for the video to start playing or not. Set to true between the time the user input callback fires and the first play call that arrives after said callback fires.
+        var video_cued = !autobuffering || yt.config_.hasOwnProperty("PLAYER_CONFIG") && yt.config_.PLAYER_CONFIG.hasOwnProperty("args") && yt.config_.PLAYER_CONFIG.args.hasOwnProperty("el") && (yt.config_.PLAYER_CONFIG.args.el == "embedded"); // Whether the video is cued (a red play button is in the center with a large video thumbnail in the background)
 
         function stop_autoplay() {
-            if (autobuffering) {
+            if (autobuffering && !video_cued) {
                 ytapi.pauseVideo();
-            } else {
+            } else if (!autobuffering) {
                 init_time = ytapi.getCurrentTime();
                 ytapi.cueVideoByPlayerVars(ytapi.getVideoData());
-                video_emptied = false;
+                play_authorized = true;
             };
         };
 
@@ -129,11 +130,8 @@ function frame_script_code(m_frame_event_name) {
             for (event_name of ["mouseup", "keyup", "touchend"]) {
                 ytapi.parentElement.removeEventListener(event_name, user_input_callback, true);
             };
-            if (autobuffering) {
-                video_emptied = false;
-            } else {
-                video_load_waiting = true;
-            };
+            play_authorized = true;
+            play_pending = true;
         };
 
         function add_user_input_listeners() {
@@ -149,11 +147,10 @@ function frame_script_code(m_frame_event_name) {
             writable: false,
             enumerable: true,
             value: function() {
-                if (video_emptied && autobuffering) {
+                if (!play_authorized) {
                     setTimeout(function() { stop_autoplay(); }, 0);
                 } else {
-                    video_emptied = false;
-                    video_load_waiting = false; // It's possible that video_load_waiting won't become false if the user clicks away before play() is called.
+                    play_pending = false; // It's possible that play_pending won't become false if the user clicks away before play() is called.
                     if (init_time > 0) {
                         ytapi.seekTo(init_time);
                         init_time = -1;
@@ -168,15 +165,15 @@ function frame_script_code(m_frame_event_name) {
             writable: false,
             enumerable: true,
             value: function() {
-                if (video_emptied && !video_load_waiting) {
+                if (!(play_authorized || play_pending)) {
                     setTimeout(function() { stop_autoplay(); }, 0);
-                    if (!autobuffering) {
+                    if (video_cued) {
                         return;
                     };
-                } else if (element.src.length === 0) {
-                    video_emptied = true;
+                } else if (element.src.length === 0 && !play_pending) {
+                    play_authorized = false;
                     add_user_input_listeners();
-                    if (!autobuffering) {
+                    if (video_cued) {
                         return;
                     };
                 };
