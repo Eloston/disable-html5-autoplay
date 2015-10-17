@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+    <body>
+        <span id="extension-name"></span>
+        <span style="padding-left: 3em; padding-bottom: 1em; display: block;">
+            Version
+            <span id="extension-version"></span>
+        </span>
+        <a href="https://github.com/Eloston/disable-html5-autoplay" class="external-link">GitHub Project Page</a>
+        <a href="https://github.com/Eloston/disable-html5-autoplay/issues" class="external-link">Have a question, suggestion, or issue? Post it on the GitHub Issue Tracker</a>
+        <hr>
+            <span class="heading">General</span>
+        </hr>
+        <label for="default-mode">Default disabling mode:</label>
+        <select id="default-mode" disabled="disabled">
+            <!--<option value="2">Autoplay & autobuffer</option>
+            <option value="1">Autoplay only</option>-->
+            <option value="1">Autoplay</option>
+            <option value="0">Nothing</option>
+        </select>
+        <label id="default-mode-saving-status" for="default-mode" class="progress-text">Loading default mode...</label>
+        <hr>
+            <span class="heading">Mode rules</span>
+        </hr>
+        <p>Specify the mode for specific websites</p>
+        <div>
+            <input type="button" id="reset-mode-rules" disabled="disabled" value="Reset"></input>
+            <input type="button" id="save-mode-rules" disabled="disabled" value="Save"></input>
+            <label id="save-mode-rules-status" for="save-mode-rules" class="progress-text">Loading mode rules...</label>
+        </div>
+        <textarea id="mode-rules" spellcheck="false" disabled="disabled">Loading mode rules...</textarea>
+    </body>
+    <head>
+        <title>Options - Disable HTML5 Autoplay</title>
+        <script src="options.js"></script>
+        <style>
+            hr {
+                margin-top: 2.5em;
+                margin-bottom: 0.25em;
+            }
+            #extension-name {
+                font-size: 1.75em;
+                font-weight: bold;
+            }
+            #mode-rules {
+                box-sizing: border-box;
+                height: 42vh;
+                text-align: left;
+                white-space: pre;
+                width: 100%;
+                word-wrap: normal;
+                margin-top: 0.5em;
+            }
+            .heading {
+                display: block;
+                font-size: 1.25em;
+                font-weight: bold;
+                margin-bottom: 1em;
+            }
+            .external-link {
+                display: block;
+                padding: 1em 0 0 0;
+            }
+            .progress-text {
+                color: #909090;
+            }
+        </style>
+    </head>
+</html>
