@@ -73,6 +73,8 @@ function validate_mode_rules(raw_mode_rules) {
             } else {
                 return [false, "There is a line missing a domain name"];
             };
+        } else if (rule_parts.length == 1 && rule_parts[0].length > 0) {
+            return [false, "The domain \"" + rule_parts[0] + "\" is missing a mode"];
         };
     };
     return [true];

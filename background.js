@@ -195,6 +195,20 @@ function update_popup(tabid, reset) {
     };
 };
 
+function update_popups_with_pending_modes() {
+    for (map_item_array of g_tab_states) {
+        var new_domain_mode = get_mode_rule_for_domain(map_item_array[1].domain_name).mode;
+        if (new_domain_mode == map_item_array[1].mode) {
+            map_item_array[1].pending_mode = -1;
+        } else if (map_item_array[1].pending_mode != new_domain_mode) {
+            map_item_array[1].pending_mode = new_domain_mode;
+        } else {
+            continue;
+        };
+        update_popup(map_item_array[0], true);
+    };
+};
+
 function update_browser_action_icon(tabid, icon_active) {
     if (icon_active) {
         chrome.browserAction.setIcon({ tabId: tabid, path: { "19": "images/active_19.png", "38": "images/active_38.png" } }, function() {
@@ -238,15 +252,7 @@ chrome.storage.onChanged.addListener(function(changes, areaName) {
         };
     };
     parse_storage(new_values);
-    for (map_item_array of g_tab_states) {
-        var new_domain_mode = get_mode_rule_for_domain(map_item_array[1].domain_name).mode;
-        if (new_domain_mode == map_item_array[1].mode) {
-            map_item_array[1].pending_mode = -1;
-        } else {
-            map_item_array[1].pending_mode = new_domain_mode;
-        };
-        update_popup(map_item_array[0], true);
-    };
+    update_popups_with_pending_modes();
 });
 
 chrome.webNavigation.onBeforeNavigate.addListener(function(details) { // Update the browser action icon when navigating to these pages
@@ -375,6 +381,7 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
                             prevent_deletion: get_mode_rule_for_domain(tab_state.domain_name).prevent_deletion
                         });
                     };
+                    update_popups_with_pending_modes();
                     store_mode_rule(tab_state.domain_name, message.mode);
                 } else {
                     console.error("background.js: Invalid value for message.mode: " + JSON.stringify(message.mode));
