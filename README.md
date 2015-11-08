@@ -13,7 +13,7 @@ Here are some of its features with some technical details:
 
 ## Using this extension
 
-After installation, the extension will function on all new tabs.
+After installation, existing tabs will need to be reloaded for the extension to take effect.
 
 This extension creates an icon next to the address bar (which is called a Browser Action.) The icon properties have tab-specific meanings:
 * When the icon has color, this means that autoplay is disabled.
