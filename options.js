@@ -8,6 +8,7 @@ MODE_RULES_FORMAT = {
     MODE_AUTOBUFFER_AUTOPLAY: "autobuffer-and-autoplay",
     MODE_AUTOPLAY_ONLY: "autoplay-only",
     MODE_NOTHING: "nothing",
+    PREVENT_DELETION_ARGUMENT: "prevent-deletion",
     COMMENT_ESCAPE: "#",
     COMMENT_ESCAPE_REGEX: new RegExp("#(.+)"),
     VALUE_DELIMITER: " ",
@@ -51,6 +52,7 @@ function set_element_text(element, new_text) {
 };
 
 function validate_mode_rules(raw_mode_rules) {
+    var used_domains = new Set();
     var rules_array = raw_mode_rules.split(MODE_RULES_FORMAT.RULE_DELIMITER);
     for (var line_index = 0; line_index < rules_array.length; line_index++) {
         var rule_parts = rules_array[line_index].split(MODE_RULES_FORMAT.COMMENT_ESCAPE_REGEX)[0].split(MODE_RULES_FORMAT.VALUE_DELIMITER);
@@ -58,14 +60,22 @@ function validate_mode_rules(raw_mode_rules) {
             if (rule_parts[0].length > 0) {
                 //if (!(rule_parts[1] == MODE_RULES_FORMAT.MODE_AUTOBUFFER_AUTOPLAY || rule_parts[1] == MODE_RULES_FORMAT.MODE_AUTOPLAY_ONLY || rule_parts[1] == MODE_RULES_FORMAT.MODE_NOTHING)) {
                 if (!(rule_parts[1] == MODE_RULES_FORMAT.MODE_AUTOPLAY_ONLY || rule_parts[1] == MODE_RULES_FORMAT.MODE_NOTHING)) {
-                    return false;
+                    return [false, "The domain \"" + rule_parts[0] + "\" has an unknown mode \"" + rule_parts[1] + "\""];
+                };
+                if (used_domains.has(rule_parts[0])) {
+                    return [false, "The domain \"" + rule_parts[0] + "\" has been used more than once"];
+                } else {
+                    used_domains.add(rule_parts[0]);
+                };
+                if (rule_parts.length > 2 && rule_parts[2].length > 0 && rule_parts[2] != MODE_RULES_FORMAT.PREVENT_DELETION_ARGUMENT) {
+                    return [false, "The domain \"" + rule_parts[0] + "\" has an unknown argument \"" + rule_parts[2] + "\""]
                 };
             } else {
-                return false;
+                return [false, "There is a line missing a domain name"];
             };
         };
     };
-    return true;
+    return [true];
 };
 
 chrome.storage.local.get([STORAGE_KEYS.VERSION, STORAGE_KEYS.DEFAULT_MODE, STORAGE_KEYS.MODE_RULES], function(storage_values) {
@@ -117,7 +127,8 @@ chrome.storage.local.get([STORAGE_KEYS.VERSION, STORAGE_KEYS.DEFAULT_MODE, STORA
                 reset_mode_rules_button.setAttribute("disabled", "disabled");
                 save_mode_rules_button.setAttribute("disabled", "disabled");
                 set_element_text(document.getElementById(ELEMENTS.SAVE_MODE_RULES_STATUS), "Validating...");
-                if (validate_mode_rules(mode_rules_element.value)) {
+                var validation_result = validate_mode_rules(mode_rules_element.value);
+                if (validation_result[0] === true) {
                     set_element_text(document.getElementById(ELEMENTS.SAVE_MODE_RULES_STATUS), "Saving...");
                     g_raw_mode_rules = mode_rules_element.value;
                     g_ignore_event_handler = true;
@@ -130,7 +141,7 @@ chrome.storage.local.get([STORAGE_KEYS.VERSION, STORAGE_KEYS.DEFAULT_MODE, STORA
                             }, SAVED_TEXT_VISIBILITY_TIMEOUT);
                     });
                 } else {
-                    set_element_text(document.getElementById(ELEMENTS.SAVE_MODE_RULES_STATUS), "Error: The mode rules do not follow the correct format");
+                    set_element_text(document.getElementById(ELEMENTS.SAVE_MODE_RULES_STATUS), "Error: " + validation_result[1]);
                     reset_mode_rules_button.removeAttribute("disabled");
                     save_mode_rules_button.removeAttribute("disabled");
                 };

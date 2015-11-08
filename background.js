@@ -13,6 +13,7 @@ MODE_RULES_FORMAT = {
     MODE_AUTOBUFFER_AUTOPLAY: "autobuffer-and-autoplay",
     MODE_AUTOPLAY_ONLY: "autoplay-only",
     MODE_NOTHING: "nothing",
+    PREVENT_DELETION_ARGUMENT: "prevent-deletion",
     COMMENT_ESCAPE: "#",
     COMMENT_ESCAPE_REGEX: new RegExp("#(.+)"),
     VALUE_DELIMITER: " ",
@@ -38,22 +39,52 @@ PERMANENT_WHITELIST = [
 g_options = new Object();
 g_tab_states = new Map();
 g_ignore_storage_change_event = false;
+g_is_storage_ready = false;
+g_storage_ready_callbacks = new Array();
 
-function get_second_level_domain(url_string) {
+function wait_for_storage_ready() {
+    args = Array.prototype.slice.call(arguments);
+    if (g_is_storage_ready == true) {
+        var callback = args[0];
+        args.shift();
+        callback.apply(null, args);
+    } else {
+        g_storage_ready_callbacks.push(args);
+    };
+};
+
+function get_domain_from_url(url_string) {
     var url_parser = document.createElement("a");
     url_parser.href = url_string;
-    var exploded_url = url_parser.hostname.split(".");
-    return exploded_url[exploded_url.length - 2] + "." + exploded_url[exploded_url.length - 1];
+    return url_parser.hostname;
 };
 
 function parse_storage(storage_values) {
-    g_options.default_mode = storage_values[STORAGE_KEYS.DEFAULT_MODE];
-    g_options.mode_rules = new Map();
-    for (rule_line of storage_values[STORAGE_KEYS.MODE_RULES].split("\n")) {
-        var parsed_line = rule_line.split(MODE_RULES_FORMAT.COMMENT_ESCAPE_REGEX)[0].split(MODE_RULES_FORMAT.VALUE_DELIMITER);
-        if (parsed_line.length >= 2) {
-            g_options.mode_rules.set(parsed_line[0], MODE_RULES_FORMAT.MODE_MAP[parsed_line[1]]);
+    if (STORAGE_KEYS.DEFAULT_MODE in storage_values) {
+        g_options.default_mode = storage_values[STORAGE_KEYS.DEFAULT_MODE];
+    };
+    if (STORAGE_KEYS.MODE_RULES in storage_values) {
+        g_options.mode_rules = new Map();
+        for (rule_line of storage_values[STORAGE_KEYS.MODE_RULES].split("\n")) {
+            var parsed_line = rule_line.split(MODE_RULES_FORMAT.COMMENT_ESCAPE_REGEX)[0].split(MODE_RULES_FORMAT.VALUE_DELIMITER);
+            if (parsed_line.length >= 2) {
+                var prevent_deletion = false;
+                if (parsed_line.length > 2 && parsed_line[2] == MODE_RULES_FORMAT.PREVENT_DELETION_ARGUMENT) {
+                    prevent_deletion = true;
+                };
+                g_options.mode_rules.set(parsed_line[0], {
+                    mode: MODE_RULES_FORMAT.MODE_MAP[parsed_line[1]],
+                    prevent_deletion: prevent_deletion
+                });
+            };
         };
+    };
+    g_is_storage_ready = true;
+    while (g_storage_ready_callbacks.length > 0) {
+        var callback_array = g_storage_ready_callbacks.shift();
+        var callback = callback_array[0];
+        callback_array.shift();
+        callback.apply(null, callback_array);
     };
 };
 
@@ -62,9 +93,12 @@ function store_mode_rule(domain, new_mode) {
         var mode_rules_array = storage_values[STORAGE_KEYS.MODE_RULES].split(MODE_RULES_FORMAT.RULE_DELIMITER);
         for (var line_index = 0; line_index < mode_rules_array.length; line_index++) {
             var parsed_line = mode_rules_array[line_index].split(MODE_RULES_FORMAT.COMMENT_ESCAPE_REGEX)[0].split(MODE_RULES_FORMAT.VALUE_DELIMITER);
-            if (parsed_line.length >= 2 && parsed_line[0] == domain && MODE_RULES_FORMAT.MODE_MAP[parsed_line[1]] != new_mode) {
+            if (parsed_line.length >= 2 && parsed_line[0] == domain) {
                 parsed_line[1] = MODE_RULES_FORMAT.REVERSE_MODE_MAP[new_mode];
                 mode_rules_array[line_index] = parsed_line.join(" ") + (mode_rules_array[line_index].split(MODE_RULES_FORMAT.COMMENT_ESCAPE_REGEX)[1] || "");
+                if ((g_options.default_mode == new_mode || get_mode_rule_for_domain(domain, true).mode == new_mode) && (parsed_line.length == 2 || parsed_line[2] != MODE_RULES_FORMAT.PREVENT_DELETION_ARGUMENT)) {
+                    mode_rules_array.splice(line_index, 1);
+                };
                 storage_values[STORAGE_KEYS.MODE_RULES] = mode_rules_array.join(MODE_RULES_FORMAT.RULE_DELIMITER);
                 g_ignore_storage_change_event = true;
                 chrome.storage.local.set(storage_values, function() {
@@ -72,6 +106,9 @@ function store_mode_rule(domain, new_mode) {
                 });
                 return;
             };
+        };
+        if (g_options.default_mode == new_mode && get_mode_rule_for_domain(domain, true).mode == new_mode) {
+            return;
         };
         if (mode_rules_array.length == 1 && mode_rules_array[0].length == 0) {
             mode_rules_array.pop();
@@ -105,11 +142,21 @@ function initialize_options() {
     });
 };
 
-function get_mode_for_domain(domain) {
-    if (g_options.mode_rules.has(domain)) {
-        return g_options.mode_rules.get(domain);
-    } else {
-        return g_options.default_mode;
+function get_mode_rule_for_domain(domain, for_parent) {
+    var domain_array = domain.split(".");
+    var init_level = 0;
+    if (for_parent == true) {
+        init_level = 1;
+    };
+    for (var subtract_level = init_level; subtract_level < domain_array.length; subtract_level++) {
+        var test_domain = domain_array.slice(subtract_level).join(".");
+        if (g_options.mode_rules.has(test_domain)) {
+            return g_options.mode_rules.get(test_domain);
+        };
+    };
+    return {
+        mode: g_options.default_mode,
+        prevent_deletion: false
     };
 };
 
@@ -177,8 +224,6 @@ chrome.storage.onChanged.addListener(function(changes, areaName) {
             });
             return;
         };
-    } else {
-        new_values.default_mode = g_options.default_mode;
     };
     if (STORAGE_KEYS.MODE_RULES in changes) {
         if ("newValue" in changes[STORAGE_KEYS.MODE_RULES]) {
@@ -191,12 +236,10 @@ chrome.storage.onChanged.addListener(function(changes, areaName) {
             });
             return;
         };
-    } else {
-        new_values.mode_rules = g_options.mode_rules;
     };
     parse_storage(new_values);
     for (map_item_array of g_tab_states) {
-        var new_domain_mode = get_mode_for_domain(map_item_array[1].domain_name);
+        var new_domain_mode = get_mode_rule_for_domain(map_item_array[1].domain_name).mode;
         if (new_domain_mode == map_item_array[1].mode) {
             map_item_array[1].pending_mode = -1;
         } else {
@@ -215,31 +258,33 @@ chrome.webNavigation.onBeforeNavigate.addListener(function(details) { // Update 
 }, { url: [{ urlPrefix: "chrome" }, { schemes: ["ftp"] }] });
 
 chrome.webNavigation.onCommitted.addListener(function(details) {
-    if (details.frameId == 0) {
-        if (g_tab_states.has(details.tabId)) {
-            g_tab_states.delete(details.tabId);
-        };
-        for (whitelisted_url of PERMANENT_WHITELIST) {
-            if (details.url.startsWith(whitelisted_url)) {
-                update_popup(details.tabId, true);
-                update_browser_action_icon(details.tabId, false);
-                return;
+    wait_for_storage_ready(function(details) {
+        if (details.frameId == 0) {
+            if (g_tab_states.has(details.tabId)) {
+                g_tab_states.delete(details.tabId);
             };
+            for (whitelisted_url of PERMANENT_WHITELIST) {
+                if (details.url.startsWith(whitelisted_url)) {
+                    update_popup(details.tabId, true);
+                    update_browser_action_icon(details.tabId, false);
+                    return;
+                };
+            };
+            g_tab_states.set(details.tabId, {
+                mode: get_mode_rule_for_domain(get_domain_from_url(details.url)).mode,
+                pending_mode: -1,
+                domain_name: get_domain_from_url(details.url),
+                media_statistics: new Object()
+            });
+            update_popup(details.tabId, true);
+            update_browser_action_icon(details.tabId, g_tab_states.has(details.tabId) && (g_tab_states.get(details.tabId).mode != DISABLING_MODE.NOTHING));
         };
-        g_tab_states.set(details.tabId, {
-            mode: get_mode_for_domain(get_second_level_domain(details.url)),
-            pending_mode: -1,
-            domain_name: get_second_level_domain(details.url),
-            media_statistics: new Object()
-        });
-        update_popup(details.tabId, true);
-        update_browser_action_icon(details.tabId, g_tab_states.has(details.tabId) && (g_tab_states.get(details.tabId).mode != DISABLING_MODE.NOTHING));
-    };
-    if (g_tab_states.has(details.tabId) && (g_tab_states.get(details.tabId).mode != DISABLING_MODE.NOTHING)) {
-        chrome.tabs.executeScript(details.tabId, {file: "content_script.js", allFrames: true, matchAboutBlank: true, runAt: "document_start"}, function() {
-            chrome.runtime.lastError; // TODO: Log these errors into a debug log
-        });
-    };
+        if (g_tab_states.has(details.tabId) && (g_tab_states.get(details.tabId).mode != DISABLING_MODE.NOTHING)) {
+            chrome.tabs.executeScript(details.tabId, {file: "content_script.js", allFrames: true, matchAboutBlank: true, runAt: "document_start"}, function() {
+                chrome.runtime.lastError; // TODO: Log these errors into a debug log
+            });
+        };
+    }, details);
 }, { url: [{ schemes: ["http", "https", "file"] }] });
 
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
@@ -320,7 +365,16 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
             if (g_tab_states.has(message.tabid)) {
                 var tab_state = g_tab_states.get(message.tabid);
                 if (message.mode == DISABLING_MODE.NOTHING || message.mode == DISABLING_MODE.AUTOPLAY || message.mode == DISABLING_MODE.AUTOBUFFER_AUTOPLAY) {
-                    g_options.mode_rules.set(tab_state.domain_name, message.mode);
+                    if (get_mode_rule_for_domain(tab_state.domain_name).prevent_deletion == false && message.mode == g_options.default_mode && message.mode == get_mode_rule_for_domain(tab_state.domain_name, true).mode) {
+                        g_options.mode_rules.delete(tab_state.domain_name);
+                    } else if (g_options.mode_rules.has(tab_state.domain_name)) {
+                        g_options.mode_rules.get(tab_state.domain_name).mode = message.mode;
+                    } else {
+                        g_options.mode_rules.set(tab_state.domain_name, {
+                            mode: message.mode,
+                            prevent_deletion: get_mode_rule_for_domain(tab_state.domain_name).prevent_deletion
+                        });
+                    };
                     store_mode_rule(tab_state.domain_name, message.mode);
                 } else {
                     console.error("background.js: Invalid value for message.mode: " + JSON.stringify(message.mode));
