@@ -4,7 +4,7 @@
     "name": "Disable HTML5 Autoplay",
     "short_name": "DisableAutoplay",
     "description": "Disables autoplay of all HTML5 audio and video",
-    "version": "0.5.3.2",
+    "version": "0.6",
     "author": "Eloston",
     "homepage_url": "https://github.com/Eloston/disable-html5-autoplay/",
     "icons": {
