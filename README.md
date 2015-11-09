@@ -1,17 +1,16 @@
 # ![(Disable HTML5 Autoplay logo should be here)](https://raw.githubusercontent.com/Eloston/disable-html5-autoplay/master/images/icon_48.png "Logo for Disable HTML5 Autoplay") Disable HTML5 Autoplay
-**An extension for Chromium-based browsers that disables autoplay of all HTML5 audio and video**
+**An extension for Chromium-based browsers that disables HTML5 audio and video autoplaying**
 
-This extension disables HTML5 media autoplay on all websites. It requires little to no user interaction and should work on all websites without breaking functionality. 
+Disable HTML5 Autoplay does exactly what it says: disable HTML5 audio and video autoplaying.
 
-Here are some of its features with some technical details:
+Main Features:
+* Prevents unauthorized invocations of the `play()` function
 * Stops media with the `autoplay` attribute
-* Works on dynamically-inserted elements and all iframes
-* Toggle autoplay on second-level domains (will be saved across browser sessions in the future)
-* Media player-specific code to prevent the controls from breaking
-* Prevents unauthorized invocations of the `play()` function via detecting user input events (for media without special code)
-  * Fires `play`, `playing`, and `pause` events manually during an unauthorized invocation
+* Works on dynamically-inserted elements and iframes
+* Special code to prevent media players from breaking
+* Toggle autoplay on specific websites
 
-Head over to the [Wiki](/Eloston/disable-html5-autoplay/wiki) for more information.
+Head over to the [Wiki](/Eloston/disable-html5-autoplay/wiki) for documentation and additional information.
 
 ## Installation
 
