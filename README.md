@@ -3,12 +3,7 @@
 
 Disable HTML5 Autoplay does exactly what it says: disable HTML5 audio and video autoplaying.
 
-Main Features:
-* Prevents unauthorized invocations of the `play()` function
-* Stops media with the `autoplay` attribute
-* Works on dynamically-inserted elements and iframes
-* Special code to prevent media players from breaking
-* Toggle autoplay on specific websites
+In addition to removing the HTML `autoplay` attribute from media elements, Disable HTML5 Autoplay also hooks into the media's JavaScript API. This allows for restrictions on media control and simulation of expected behavior to ensure that all pages behave normally.
 
 Head over to the [Wiki](/Eloston/disable-html5-autoplay/wiki) for documentation and additional information.
 
