@@ -2,13 +2,13 @@
 <html>
     <body>
         <div id="click-reload" hidden="hidden">Changes will take effect on a page reload.<br /><br />Click to reload the page.</div>
-        <div id="main-heading" title="Click to open the options page">
+        <div id="main-heading" title="Click to open the Options page">
             <div id="extension-name"></div>
             <div id="extension-version"></div>
         </div>
-        <div class="subheading">Mode setting</div>
+        <div class="subheading">Mode Rule</div>
         <center>
-            <p class="text-content">Select what to disable</p>
+            <p class="text-content">Set the Mode Rule for the current domain</p>
             <div id="mode-settings">
                 <!-- TODO: Uncomment when autobuffering is added -->
                 <!--<input id="mode-setting-all" name="mode-setting-option" type="radio"></input>
@@ -16,15 +16,15 @@
 
                 <input id="mode-setting-autoplay-only" name="mode-setting-option" type="radio"></input>
                 <!--<label for="mode-setting-autoplay-only">Autoplay only</label>-->
-                <label for="mode-setting-autoplay-only" title="Select this mode to stop only autoplay">Autoplay</label>
+                <label for="mode-setting-autoplay-only" title="Select this Mode to stop only autoplay">Autoplay</label>
 
                 <input id="mode-setting-none" name="mode-setting-option" type="radio"></input>
-                <label for="mode-setting-none" title="Select this mode to do nothing to the page">Nothing</label>
+                <label for="mode-setting-none" title="Select this Mode to do nothing">Nothing</label>
 
                 <span class="slide-button"></span>
             </div>
         </center>
-        <div id="can-run-is-false">Nothing can be disabled on this page</div>
+        <div id="can-run-is-false">Mode Rules cannot be configured for this page</div>
         <div class="subheading">Totals</div>
         <div class="text-content">
             <span>Media elements: <span id="media-element-count" class="darker-text"></span></span>
@@ -96,6 +96,7 @@
                 text-align: center;
                 color: #666666;
                 margin: 0.8em 1em 0.8em 1em;
+                white-space: normal;
             }
             .darker-text {
                 color: #333333;

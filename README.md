@@ -1,4 +1,4 @@
-# Disable HTML5 Autoplay
+# ![(Disable HTML5 Autoplay logo should be here)](https://raw.githubusercontent.com/Eloston/disable-html5-autoplay/master/images/icon_48.png "Logo for Disable HTML5 Autoplay") Disable HTML5 Autoplay
 **An extension for Chromium-based browsers that disables autoplay of all HTML5 audio and video**
 
 This extension disables HTML5 media autoplay on all websites. It requires little to no user interaction and should work on all websites without breaking functionality. 
@@ -11,19 +11,7 @@ Here are some of its features with some technical details:
 * Prevents unauthorized invocations of the `play()` function via detecting user input events (for media without special code)
   * Fires `play`, `playing`, and `pause` events manually during an unauthorized invocation
 
-## Using this extension
-
-After installation, existing tabs will need to be reloaded for the extension to take effect.
-
-This extension creates an icon next to the address bar (which is called a Browser Action.) The icon properties have tab-specific meanings:
-* When the icon has color, this means that autoplay is disabled.
-* When the icon is a light grey, this means that autoplay is enabled.
-* The number that appears over the icon is the number of autoplay attempts.
-
-When the Browser Action is clicked, a popup will appear with the following:
-* A toggle switch to set the extension's mode for the current page's domain. The current mode is shown in the green box.
-* A section displaying the total number of autoplay attempts and the total number of media elements
-* A section with the number of media elements and the number of autoplay attempts for each media player type.
+Head over to the [Wiki](/Eloston/disable-html5-autoplay/wiki) for more information.
 
 ## Installation
 
@@ -46,18 +34,6 @@ Currently, only Chrome/Chromium and Opera are supported. Firefox will be support
   * master branch source code: [.tar.gz](https://github.com/Eloston/ungoogled-chromium/archive/master.tar.gz) or [.zip](https://github.com/Eloston/ungoogled-chromium/archive/master.zip)
 2. In `chrome://extensions/`, enable Developer mode
 3. Use "Load unpacked extension..." and select the folder containing the extension source code
-
-## Project Status and News
-
-This extension is still in its relatively early stages (see the [Issue Tracker](https://github.com/Eloston/disable-html5-autoplay/issues) for more information.)
-
-As of now (October 2015), I do not have much spare time to work on the extension. This should change by December 2015.
-
-## Contributing
-
-Until the extension matures more, I will generally not accept pull requests. The exceptions are new or improved media player delegates, UI tweaks, and minor changes to any other part of the extension (i.e. they do not make changes to the structure of the code.)
-
-Please leave any problems, suggestions, or questions in the [Issue Tracker](https://github.com/Eloston/disable-html5-autoplay/issues).
 
 ## License
 

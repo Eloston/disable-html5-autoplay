@@ -96,7 +96,7 @@ function store_mode_rule(domain, new_mode) {
             if (parsed_line.length >= 2 && parsed_line[0] == domain) {
                 parsed_line[1] = MODE_RULES_FORMAT.REVERSE_MODE_MAP[new_mode];
                 mode_rules_array[line_index] = parsed_line.join(" ") + (mode_rules_array[line_index].split(MODE_RULES_FORMAT.COMMENT_ESCAPE_REGEX)[1] || "");
-                if ((g_options.default_mode == new_mode || get_mode_rule_for_domain(domain, true).mode == new_mode) && (parsed_line.length == 2 || parsed_line[2] != MODE_RULES_FORMAT.PREVENT_DELETION_ARGUMENT)) {
+                if (get_mode_rule_for_domain(domain, true).mode == new_mode && (parsed_line.length == 2 || parsed_line[2] != MODE_RULES_FORMAT.PREVENT_DELETION_ARGUMENT)) {
                     mode_rules_array.splice(line_index, 1);
                 };
                 storage_values[STORAGE_KEYS.MODE_RULES] = mode_rules_array.join(MODE_RULES_FORMAT.RULE_DELIMITER);
@@ -107,7 +107,7 @@ function store_mode_rule(domain, new_mode) {
                 return;
             };
         };
-        if (g_options.default_mode == new_mode && get_mode_rule_for_domain(domain, true).mode == new_mode) {
+        if (get_mode_rule_for_domain(domain, true).mode == new_mode) {
             return;
         };
         if (mode_rules_array.length == 1 && mode_rules_array[0].length == 0) {
@@ -371,7 +371,7 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
             if (g_tab_states.has(message.tabid)) {
                 var tab_state = g_tab_states.get(message.tabid);
                 if (message.mode == DISABLING_MODE.NOTHING || message.mode == DISABLING_MODE.AUTOPLAY || message.mode == DISABLING_MODE.AUTOBUFFER_AUTOPLAY) {
-                    if (get_mode_rule_for_domain(tab_state.domain_name).prevent_deletion == false && message.mode == g_options.default_mode && message.mode == get_mode_rule_for_domain(tab_state.domain_name, true).mode) {
+                    if (get_mode_rule_for_domain(tab_state.domain_name).prevent_deletion == false && message.mode == get_mode_rule_for_domain(tab_state.domain_name, true).mode) {
                         g_options.mode_rules.delete(tab_state.domain_name);
                     } else if (g_options.mode_rules.has(tab_state.domain_name)) {
                         g_options.mode_rules.get(tab_state.domain_name).mode = message.mode;
