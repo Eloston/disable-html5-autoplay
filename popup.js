@@ -10,6 +10,12 @@ DISABLING_MODE = {
     AUTOPLAY: 1,
     NOTHING: 0
 };
+DISABLING_MODE_NAME = {
+    [DISABLING_MODE.AUTOBUFFER_AUTOPLAY]: "Autobuffer and Autoplay",
+    //[DISABLING_MODE.AUTOPLAY]: "Autoplay only",
+    [DISABLING_MODE.AUTOPLAY]: "Autoplay",
+    [DISABLING_MODE.NOTHING]: "Nothing"
+};
 ELEMENTS = {
     CLICK_RELOAD: "click-reload",
     MAIN_HEADING: "main-heading",
@@ -19,6 +25,7 @@ ELEMENTS = {
     MODE_SETTING_ALL: "mode-setting-all",
     MODE_SETTING_AUTOPLAY_ONLY: "mode-setting-autoplay-only",
     MODE_SETTING_NONE: "mode-setting-none",
+    CURRENT_MODE: "current-mode",
     CAN_RUN_IS_FALSE: "can-run-is-false",
     MEDIA_ELEMENT_COUNT: "media-element-count",
     AUTOPLAY_ATTEMPTS: "autoplay-attempts",
@@ -147,6 +154,7 @@ function set_data(reset, can_run, mode, pending_mode, statistics) {
     } else {
         mode_settings.current_mode = mode;
     };
+    document.getElementById(ELEMENTS.CURRENT_MODE).textContent = DISABLING_MODE_NAME[mode_settings.current_mode];
     if (can_run) {
         document.getElementById(ELEMENTS.CAN_RUN_IS_FALSE).hidden = "hidden";
     } else {
