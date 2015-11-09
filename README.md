@@ -1,11 +1,20 @@
-# ![(Disable HTML5 Autoplay logo should be here)](https://raw.githubusercontent.com/Eloston/disable-html5-autoplay/master/images/icon_48.png "Logo for Disable HTML5 Autoplay") Disable HTML5 Autoplay
+<h1 align="center">
+    <sub>
+        <img
+            src="https://raw.githubusercontent.com/Eloston/disable-html5-autoplay/master/images/icon_128.png"
+            width="38"
+            height="38">
+        </img>
+    </sub>
+    Disable HTML5 Autoplay
+</h1>
 **An extension for Chromium-based browsers that disables HTML5 audio and video autoplaying**
 
 Disable HTML5 Autoplay does exactly what it says: disable HTML5 audio and video autoplaying.
 
 In addition to removing the HTML `autoplay` attribute from media elements, Disable HTML5 Autoplay also hooks into the media's JavaScript API. This allows for restrictions on media control and simulation of expected behavior to ensure that all pages behave normally.
 
-Head over to the [Wiki](/Eloston/disable-html5-autoplay/wiki) for documentation and additional information.
+Head over to the [Wiki](https://github.com/Eloston/disable-html5-autoplay/wiki) for documentation and additional information.
 
 ## Installation
 
