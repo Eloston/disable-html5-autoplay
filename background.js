@@ -36,11 +36,24 @@ MODE_RULES_FORMAT.REVERSE_MODE_MAP = (function() {
 PERMANENT_WHITELIST = [
     "https://chrome.google.com/webstore" // Chrome won't allow content scripts here
 ];
+MESSAGING = {
+    POPUP: {
+        PORT_NAME: "popup",
+        INITIALIZE: "initialize",
+        UPDATE_MODERULES: "update_moderules",
+        RELOAD_TAB: "reload_tab",
+        UPDATE_POPUP: "update_popup"
+    },
+    FRAME: {
+        PORT_NAME: "frame"
+    }
+};
 g_options = new Object();
 g_tab_states = new Map();
 g_ignore_storage_change_event = false;
 g_is_storage_ready = false;
 g_storage_ready_callbacks = new Array();
+g_popup_ports = new Map();
 
 function wait_for_storage_ready() {
     args = Array.prototype.slice.call(arguments);
@@ -167,31 +180,32 @@ function send_tab_message(tabid, message, options) {
 };
 
 function update_popup(tabid, reset) {
-    if (g_tab_states.has(tabid)) {
-        var tab_state = g_tab_states.get(tabid);
-        chrome.runtime.sendMessage({
-            sender: "background",
-            destination: "popup",
-            action: "update_popup",
-            reset: reset,
-            can_run: true,
-            tabid: tabid,
-            mode: tab_state.mode,
-            pending_mode: tab_state.pending_mode,
-            statistics: tab_state.media_statistics
-        });
-    } else {
-        chrome.runtime.sendMessage({
-            sender: "background",
-            destination: "popup",
-            action: "update_popup",
-            reset: reset,
-            can_run: false,
-            tabid: tabid,
-            mode: DISABLING_MODE.NOTHING,
-            pending_mode: -1,
-            statistics: new Object()
-        });
+    for (map_entry of g_popup_ports) {
+        if (map_entry[1] === tabid) {
+            if (g_tab_states.has(tabid)) {
+                var tab_state = g_tab_states.get(tabid);
+                map_entry[0].postMessage({
+                    action: MESSAGING.POPUP.UPDATE_POPUP,
+                    reset: reset,
+                    can_run: true,
+                    tabid: tabid,
+                    mode: tab_state.mode,
+                    pending_mode: tab_state.pending_mode,
+                    statistics: tab_state.media_statistics
+                });
+            } else {
+                map_entry[0].postMessage({
+                    action: MESSAGING.POPUP.UPDATE_POPUP,
+                    reset: reset,
+                    can_run: false,
+                    tabid: tabid,
+                    mode: DISABLING_MODE.NOTHING,
+                    pending_mode: -1,
+                    statistics: new Object()
+                });
+            };
+            break;
+        };
     };
 };
 
@@ -313,6 +327,74 @@ chrome.tabs.onReplaced.addListener(function(addedTabId, removedTabId) {
     };
 });
 
+chrome.runtime.onConnect.addListener(function(port) {
+    if (port.name == MESSAGING.FRAME.PORT_NAME && ("tab" in port.sender)) {
+        port.onMessage.addListener(function(message) {
+        });
+        port.onDisconnect.addListener(function() {
+        });
+    } else if (port.name == MESSAGING.POPUP.PORT_NAME && !("tab" in port.sender)) {
+        port.onMessage.addListener(function(message) {
+            switch (message.action) {
+                case MESSAGING.POPUP.INITIALIZE:
+                    if (message.tabid.constructor === Number) {
+                        g_popup_ports.set(port, message.tabid);
+                        update_popup(message.tabid, true);
+                    } else {
+                        console.error("background.js: message.tabid is not a number: " + JSON.stringify(message.tabid));
+                    };
+                    break;
+                case MESSAGING.POPUP.UPDATE_MODERULES:
+                    var tab_id = g_popup_ports.get(port);
+                    if (g_tab_states.has(tab_id)) {
+                        var tab_state = g_tab_states.get(tab_id);
+                        if (message.mode == DISABLING_MODE.NOTHING || message.mode == DISABLING_MODE.AUTOPLAY || message.mode == DISABLING_MODE.AUTOBUFFER_AUTOPLAY) {
+                            if (get_mode_rule_for_domain(tab_state.domain_name).prevent_deletion == false && message.mode == get_mode_rule_for_domain(tab_state.domain_name, true).mode) {
+                                g_options.mode_rules.delete(tab_state.domain_name);
+                            } else if (g_options.mode_rules.has(tab_state.domain_name)) {
+                                g_options.mode_rules.get(tab_state.domain_name).mode = message.mode;
+                            } else {
+                                g_options.mode_rules.set(tab_state.domain_name, {
+                                    mode: message.mode,
+                                    prevent_deletion: get_mode_rule_for_domain(tab_state.domain_name).prevent_deletion
+                                });
+                            };
+                            update_popups_with_pending_modes();
+                            store_mode_rule(tab_state.domain_name, message.mode);
+                        } else {
+                            console.error("background.js: Invalid value for message.mode: " + JSON.stringify(message.mode));
+                            break;
+                        };
+                        if (tab_state.mode == message.mode) {
+                            tab_state.pending_mode = -1;
+                        } else {
+                            tab_state.pending_mode = message.mode;
+                        };
+                    } else {
+                        console.error("background.js: update_whitelist: Tab state does not exist");
+                    };
+                    break;
+                case MESSAGING.POPUP.RELOAD_TAB:
+                    var tab_id = g_popup_ports.get(port);
+                    if (g_tab_states.has(tab_id)) {
+                        chrome.tabs.reload(tab_id);
+                    } else {
+                        console.error("background.js: reload_page: Tab state does not exist");
+                    };
+                    break;
+                default:
+                    console.error("background.js: Unknown popup message.action: " + JSON.stringify(message.action));
+            };
+        });
+        port.onDisconnect.addListener(function() {
+            g_popup_ports.delete(port);
+        });
+    } else {
+        console.error("background.js: Port does not match criteria:");
+        console.error(port);
+    };
+});
+
 chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     if (!("sender" in message) || !("destination" in message)) {
         return false;
@@ -358,55 +440,6 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
             return false;
         };
         update_popup(sender.tab.id, false);
-    } else if (!("tab" in sender) && (message.sender == "popup")) {
-        if (message.action == "initialize_popup") {
-            if (g_tab_states.has(message.tabid)) {
-                var tab_state = g_tab_states.get(message.tabid);
-                sendResponse([true, tab_state.mode, tab_state.pending_mode, tab_state.media_statistics]);
-            } else {
-                sendResponse([false, DISABLING_MODE.NOTHING, -1, new Object()]);
-            };
-            return false;
-        } else if (message.action == "update_whitelist") {
-            if (g_tab_states.has(message.tabid)) {
-                var tab_state = g_tab_states.get(message.tabid);
-                if (message.mode == DISABLING_MODE.NOTHING || message.mode == DISABLING_MODE.AUTOPLAY || message.mode == DISABLING_MODE.AUTOBUFFER_AUTOPLAY) {
-                    if (get_mode_rule_for_domain(tab_state.domain_name).prevent_deletion == false && message.mode == get_mode_rule_for_domain(tab_state.domain_name, true).mode) {
-                        g_options.mode_rules.delete(tab_state.domain_name);
-                    } else if (g_options.mode_rules.has(tab_state.domain_name)) {
-                        g_options.mode_rules.get(tab_state.domain_name).mode = message.mode;
-                    } else {
-                        g_options.mode_rules.set(tab_state.domain_name, {
-                            mode: message.mode,
-                            prevent_deletion: get_mode_rule_for_domain(tab_state.domain_name).prevent_deletion
-                        });
-                    };
-                    update_popups_with_pending_modes();
-                    store_mode_rule(tab_state.domain_name, message.mode);
-                } else {
-                    console.error("background.js: Invalid value for message.mode: " + JSON.stringify(message.mode));
-                    return false;
-                };
-                if (tab_state.mode == message.mode) {
-                    tab_state.pending_mode = -1;
-                } else {
-                    tab_state.pending_mode = message.mode;
-                };
-            } else {
-                console.error("background.js: update_whitelist: Tab state does not exist");
-                return false;
-            };
-        } else if (message.action == "reload_page") {
-            if (g_tab_states.has(message.tabid)) {
-                chrome.tabs.reload(message.tabid);
-            } else {
-                console.error("background.js: reload_page: Tab state does not exist");
-                return false;
-            };
-        } else {
-            console.error("background.js: Unknown message.action received from popup: " + JSON.stringify(message));
-            return false;
-        };
     } else {
         console.error("background.js: Invalid message received: " + JSON.stringify(message));
     };

@@ -31,15 +31,18 @@ ELEMENTS = {
     AUTOPLAY_ATTEMPTS: "autoplay-attempts",
     STATISTICS: "statistics"
 };
+MESSAGING = {
+    POPUP: {
+        PORT_NAME: "popup",
+        INITIALIZE: "initialize",
+        UPDATE_MODERULES: "update_moderules",
+        RELOAD_TAB: "reload_tab",
+        UPDATE_POPUP: "update_popup"
+    }
+};
 
-function send_message(message, responseCallback) {
-    message.sender = "popup";
-    message.destination = "background";
-    if (responseCallback instanceof Function) {
-        chrome.runtime.sendMessage(message, new Object(), responseCallback);
-    } else {
-        chrome.runtime.sendMessage(message);
-    };
+function send_message(message) {
+    port.postMessage(message);
 };
 
 function clear_data() {
@@ -130,7 +133,7 @@ var mode_settings = {
     fire_event: function(new_mode) {
         this.update_click_reload_visibility(new_mode);
         if (!this.disabled) {
-            send_message({action: "update_whitelist", mode: mode_settings.mode, tabid: g_tab_id});
+            send_message({action: MESSAGING.POPUP.UPDATE_MODERULES, mode: mode_settings.mode});
         };
     },
     initialize: function() {
@@ -195,25 +198,11 @@ function set_data(reset, can_run, mode, pending_mode, statistics) {
     mode_settings.update_click_reload_visibility(mode_settings.mode);
 };
 
-function initialize_data(response_array) {
-    set_data(true, response_array[0], response_array[1], response_array[2], response_array[3]);
-};
-
 function reload_page_callback(event) {
     event.preventDefault();
     document.getElementById(ELEMENTS.CLICK_RELOAD).setAttribute("hidden", "hidden");
-    send_message({action: "reload_page", tabid: g_tab_id});
+    send_message({action: MESSAGING.POPUP.RELOAD_TAB});
 };
-
-chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
-    if (message.sender == "background" && message.destination == "popup" && message.action == "update_popup") {
-        if (message.tabid == g_tab_id) {
-            clear_data();
-            set_data(message.reset, message.can_run, message.mode, message.pending_mode, message.statistics);
-            update_click_reload_position();
-        };
-    };
-});
 
 for (event_name of ["mouseup", "touchend"]) {
     document.getElementById(ELEMENTS.CLICK_RELOAD).addEventListener(event_name, reload_page_callback);
@@ -229,7 +218,20 @@ var manifest_details = chrome.runtime.getManifest();
 document.getElementById(ELEMENTS.EXTENSION_NAME).appendChild(document.createTextNode(manifest_details.name));
 document.getElementById(ELEMENTS.EXTENSION_VERSION).appendChild(document.createTextNode(manifest_details.version));
 
+var port = chrome.runtime.connect({name: MESSAGING.POPUP.PORT_NAME});
+
+port.onMessage.addListener(function(message) {
+    switch (message.action) {
+        case MESSAGING.POPUP.UPDATE_POPUP:
+            clear_data();
+            set_data(message.reset, message.can_run, message.mode, message.pending_mode, message.statistics);
+            update_click_reload_position();
+            break;
+        default:
+            console.error("popup.js: Unknown message.action received: " + JSON.stringify(message.action));
+    };
+});
+
 chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-    g_tab_id = tabs[0].id;
-    send_message({action: "initialize_popup", tabid: g_tab_id}, initialize_data);
+    send_message({action: MESSAGING.POPUP.INITIALIZE, tabid: tabs[0].id});
 });
