@@ -40,7 +40,7 @@ MESSAGING = {
     POPUP: {
         PORT_NAME: "popup",
         INITIALIZE: "initialize",
-        UPDATE_MODERULES: "update_moderules",
+        MODERULE_SWITCH_CHANGED: "moderule_switch_changed",
         RELOAD_TAB: "reload_tab",
         UPDATE_POPUP: "update_popup"
     },
@@ -344,7 +344,7 @@ chrome.runtime.onConnect.addListener(function(port) {
                         console.error("background.js: message.tabid is not a number: " + JSON.stringify(message.tabid));
                     };
                     break;
-                case MESSAGING.POPUP.UPDATE_MODERULES:
+                case MESSAGING.POPUP.MODERULE_SWITCH_CHANGED:
                     var tab_id = g_popup_ports.get(port);
                     if (g_tab_states.has(tab_id)) {
                         var tab_state = g_tab_states.get(tab_id);
