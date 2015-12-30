@@ -1,22 +1,24 @@
-DELEGATE_NAMES = {
+"use strict";
+
+const DELEGATE_NAMES = {
     "browser_controls": "(Browser Controls)",
     "youtube": "YouTube",
     "video.js": "Video.js",
     "jwplayer": "JWPlayer",
     "unknown": "(Unknown Type)"
 };
-DISABLING_MODE = {
+const DISABLING_MODE = {
     AUTOBUFFER_AUTOPLAY: 2,
     AUTOPLAY: 1,
     NOTHING: 0
 };
-DISABLING_MODE_NAME = {
+const DISABLING_MODE_NAME = {
     [DISABLING_MODE.AUTOBUFFER_AUTOPLAY]: "Autobuffer and Autoplay",
     //[DISABLING_MODE.AUTOPLAY]: "Autoplay only",
     [DISABLING_MODE.AUTOPLAY]: "Autoplay",
     [DISABLING_MODE.NOTHING]: "Nothing"
 };
-ELEMENTS = {
+const ELEMENTS = {
     CLICK_RELOAD: "click-reload",
     MAIN_HEADING: "main-heading",
     EXTENSION_NAME: "extension-name",
@@ -31,12 +33,14 @@ ELEMENTS = {
     AUTOPLAY_ATTEMPTS: "autoplay-attempts",
     STATISTICS: "statistics"
 };
-MESSAGING = {
+const MESSAGING = {
     POPUP: {
         PORT_NAME: "popup",
         INITIALIZE: "initialize",
-        UPDATE_MODERULES: "update_moderules",
+        MODERULE_SWITCH_CHANGED: "moderule_switch_changed",
         RELOAD_TAB: "reload_tab",
+        UPDATE_STATISTICS_DISPLAY: "update_statistics_display",
+        UPDATE_MODERULE_SETTING: "update_moderule_setting",
         UPDATE_POPUP: "update_popup"
     }
 };
@@ -46,7 +50,7 @@ function send_message(message) {
 };
 
 function clear_data() {
-    for (element_id of [ELEMENTS.MEDIA_ELEMENT_COUNT, ELEMENTS.AUTOPLAY_ATTEMPTS, ELEMENTS.STATISTICS]) {
+    for (let element_id of [ELEMENTS.MEDIA_ELEMENT_COUNT, ELEMENTS.AUTOPLAY_ATTEMPTS, ELEMENTS.STATISTICS]) {
         var current_element = document.getElementById(element_id);
         while (current_element.firstChild) {
             current_element.removeChild(current_element.firstChild);
@@ -70,8 +74,8 @@ function update_click_reload_position(click_reload_element) {
 var mode_settings = {
     get mode() {
         //opt_all = document.getElementById(ELEMENTS.MODE_SETTING_ALL);
-        opt_autoplay = document.getElementById(ELEMENTS.MODE_SETTING_AUTOPLAY_ONLY);
-        opt_none = document.getElementById(ELEMENTS.MODE_SETTING_NONE);
+        let opt_autoplay = document.getElementById(ELEMENTS.MODE_SETTING_AUTOPLAY_ONLY);
+        let opt_none = document.getElementById(ELEMENTS.MODE_SETTING_NONE);
         if (opt_none.checked) {
             return DISABLING_MODE.NOTHING;
         } else if (opt_autoplay.checked) {
@@ -84,8 +88,8 @@ var mode_settings = {
     },
     set mode(new_mode) {
         //opt_all = document.getElementById(ELEMENTS.MODE_SETTING_ALL);
-        opt_autoplay = document.getElementById(ELEMENTS.MODE_SETTING_AUTOPLAY_ONLY);
-        opt_none = document.getElementById(ELEMENTS.MODE_SETTING_NONE);
+        let opt_autoplay = document.getElementById(ELEMENTS.MODE_SETTING_AUTOPLAY_ONLY);
+        let opt_none = document.getElementById(ELEMENTS.MODE_SETTING_NONE);
         //opt_all.checked = false;
         opt_autoplay.checked = false;
         opt_none.checked = false;
@@ -112,8 +116,8 @@ var mode_settings = {
             div_elem.removeAttribute("disabled");
         };
         div_elem.disabled = new_state;
-        for (element of Array.prototype.slice.call(div_elem.children)) {
-            element.disabled = new_state
+        for (let element of Array.prototype.slice.call(div_elem.children)) {
+            element.disabled = new_state;
             if (new_state) {
                 element.setAttribute("disabled", "disabled");
             } else {
@@ -133,7 +137,7 @@ var mode_settings = {
     fire_event: function(new_mode) {
         this.update_click_reload_visibility(new_mode);
         if (!this.disabled) {
-            send_message({action: MESSAGING.POPUP.UPDATE_MODERULES, mode: mode_settings.mode});
+            send_message({action: MESSAGING.POPUP.MODERULE_SWITCH_CHANGED, mode: mode_settings.mode});
         };
     },
     initialize: function() {
@@ -166,7 +170,7 @@ function set_data(reset, can_run, mode, pending_mode, statistics) {
     if (Object.keys(statistics).length > 0) {
         var total_count = 0;
         var total_attempts = 0;
-        for (delegate_name in statistics) {
+        for (let delegate_name in statistics) {
             total_count += statistics[delegate_name].count;
             total_attempts += statistics[delegate_name].attempts;
             var p_element = document.createElement("p");
@@ -204,7 +208,7 @@ function reload_page_callback(event) {
     send_message({action: MESSAGING.POPUP.RELOAD_TAB});
 };
 
-for (event_name of ["mouseup", "touchend"]) {
+for (let event_name of ["mouseup", "touchend"]) {
     document.getElementById(ELEMENTS.CLICK_RELOAD).addEventListener(event_name, reload_page_callback);
     document.getElementById(ELEMENTS.MAIN_HEADING).addEventListener(event_name, function(event) {
         event.preventDefault();

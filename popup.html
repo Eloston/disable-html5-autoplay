@@ -1,10 +1,17 @@
 <!doctype html>
 <html>
     <body>
+        <div id="error-popup">
+            <div id="error-page-overlay"></div>
+            <div id="error-main-container">
+                <div id="error-main">Error encountered<br /><br /><div>Details:</div><textarea id="error-message" readonly="readonly" rows=5 style="width: 100%;">(No details)</textarea></div>
+            </div>
+        </div>
         <div id="click-reload" hidden="hidden">Mode changes take effect on a page reload.<br /><br />Click to reload the page.</div>
         <div id="main-heading" title="Click to open the Options page">
             <div id="extension-name"></div>
             <div id="extension-version"></div>
+            <div style="font-size: 0.9em;">Open Options page</div>
         </div>
         <center>
             <div id="mode-settings">
@@ -34,7 +41,7 @@
         <div id="statistics" class="text-content"></div>
     </body>
     <head>
-        <script src="popup.js"></script>
+        <script src="popup.new.js"></script>
         <style>
             html, body {
                 border: 0;
@@ -45,6 +52,29 @@
             p {
                 margin: inherit;
                 padding: inherit;
+            }
+            #error-page-overlay {
+                position: fixed;
+                background: rgba(0, 0, 0, 0.75);
+                width: 100%;
+                height: 100%;
+                z-index: 199;
+                top: 0;
+                left: 0;
+            }
+            #error-main-container {
+                position: absolute;
+                z-index: 200;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+            }
+            #error-main {
+                margin: 1em 1em 1em 1em;
+                padding: 1em 1em 1em 1em;
+                color: #eeeeee;
+                background: #666666;
+                border-radius: 0.5em;
             }
             #click-reload {
                 position: absolute;
