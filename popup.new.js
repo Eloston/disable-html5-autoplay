@@ -1,17 +1,17 @@
 "use strict";
 
-// Exception catcher
-
 window.onerror = function(error_message, script_url, line_number, column_number, error_object) {
     document.getElementById("error-popup").hidden = false;
-    document.getElementById("error-message").value = "Line: " + line_number +
-        "\nColumn: " + column_number +
-        "\nMessage: " + error_message +
-        "\nScript URL: " + script_url +
-        "\nError object: " + JSON.stringify(error_object);
 }
 
-// Constants
+document.getElementById("error-popup").hidden = true;
+
+function g_error_handler(value) {
+    console.error(value);
+    document.getElementById("error-popup").hidden = false;
+}
+
+
 
 const DELEGATE_NAMES = {
     "browser_controls": "(Browser Controls)",
@@ -24,16 +24,16 @@ const MODES = {
     AUTOBUFFER_AUTOPLAY: 2,
     AUTOPLAY: 1,
     NOTHING: 0,
-    INITIALIZING: -1
+    UNDEFINED: -1
 }
 const MODE_NAMES = {
     [MODES.AUTOBUFFER_AUTOPLAY]: "Autobuffer and Autoplay",
     //[MODES.AUTOPLAY]: "Autoplay only",
     [MODES.AUTOPLAY]: "Autoplay",
-    [MODES.NOTHING]: "Nothing"
+    [MODES.NOTHING]: "Nothing",
+    [MODES.UNDEFINED]: "(Loading...)"
 }
 const ELEMENTS = {
-    ERROR_POPUP: "error-popup",
     CLICK_RELOAD: "click-reload",
     MAIN_HEADING: "main-heading",
     EXTENSION_NAME: "extension-name",
@@ -43,31 +43,30 @@ const ELEMENTS = {
     MODE_SETTING_AUTOPLAY_ONLY: "mode-setting-autoplay-only",
     MODE_SETTING_NONE: "mode-setting-none",
     CURRENT_MODE: "current-mode",
-    CAN_RUN_IS_FALSE: "can-run-is-false",
     MEDIA_ELEMENT_COUNT: "media-element-count",
     AUTOPLAY_ATTEMPTS: "autoplay-attempts",
     STATISTICS: "statistics"
 }
 const MESSAGING = {
-    POPUP: {
-        PORT_NAME: "popup",
+    PORT_NAME: "popup",
+    SEND: {
         INITIALIZE: "initialize",
-        MODERULE_SWITCH_CHANGED: "moderule_switch_changed",
         RELOAD_TAB: "reload_tab",
-        UPDATE_MODERULE_SETTING: "update_moderule_setting",
-        UPDATE_STATISTICS: "update_statistics",
-        UPDATE_POPUP: "update_popup"
+        CONFIGURE_PENDING_MODE: "configure_pending_mode"
+    },
+    RECEIVE: {
+        MODES_UPDATED: "modes_updated",
+        STATISTICS_UPDATED: "statistics_updated"
     }
 }
 const EVENTS = {
-    TABSTATE: {
-        CURRENT_MODE_UPDATE: "current_mode_update",
-        PENDING_MODE_UPDATE: "pending_mode_update",
-        STATISTICS_UPATE: "statistics_update"
+    TAB_STATE: {
+        MODES_UPDATED: "modes_updated",
+        STATISTICS_UPDATED: "statistics_updated"
     }
 }
 
-// Class definitions
+
 
 class MessagingManager {
     constructor() {
@@ -85,24 +84,26 @@ class MessagingManager {
 
     _port_onmessage_callback(message) {
         switch (message.action) {
-            //case MESSAGING.POPUP.UPDATE_MODERULE_SETTING:
-            //case MESSAGING.POPUP.UPDATE_STATISTICS:
-            case MESSAGING.POPUP.UPDATE_POPUP:
+            case MESSAGING.RECEIVE.MODES_UPDATED:
+            case MESSAGING.RECEIVE.STATISTICS_UPDATED:
                 this._fire_event_listeners(message);
                 break;
             default:
-                console.error("popup.js: Unknown message.action received: " + JSON.stringify(message.action));
+                g_error_handler("popup.js: Unknown message.action received: " + JSON.stringify(message.action));
         };
     }
 
     initialize() {
-        this.port = chrome.runtime.connect({name: MESSAGING.POPUP.PORT_NAME});
+        this.port = chrome.runtime.connect({name: MESSAGING.PORT_NAME});
 
         this.port.onMessage.addListener(this._port_onmessage_callback.bind(this));
 
-        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-            this.send_message({action: MESSAGING.POPUP.INITIALIZE, tabid: tabs[0].id});
-        });
+        chrome.tabs.query({active: true, currentWindow: true}, (function(tabs) {
+            if (chrome.runtime.lastError) {
+                g_error_handler(chrome.runtime.lastError);
+            }
+            this.send_message({action: MESSAGING.SEND.INITIALIZE, tabid: tabs[0].id});
+        }).bind(this));
     }
 
     send_message(message) {
@@ -119,66 +120,249 @@ class MessagingManager {
 
 class TabStateManager {
     constructor() {
-        this.current_mode = MODES.INITIALIZING;
-        this.pending_mode = MODES.INITIALIZING;
+        this._event_handlers = new Map();
+        this.current_mode = MODES.UNDEFINED;
+        this.pending_mode = MODES.UNDEFINED;
         this.statistics = new Object();
     }
 
-    _update_moderule_setting_message_callback(message) {
+    _modes_updated_message_callback(message) {
+        this.current_mode = message.current_mode;
+        this.pending_mode = message.pending_mode;
+
+        this._fire_event_listeners(EVENTS.TAB_STATE.MODES_UPDATED);
     }
 
-    _update_statistics_message_callback(message) {
-    }
+    _statistics_updated_message_callback(message) {
+        this.statistics = message.statistics;
 
-    _update_popup_message_callback(message) { // TODO: Remove this callback
+        this._fire_event_listeners(EVENTS.TAB_STATE.STATISTICS_UPDATED, this.statistics);
     }
 
     _fire_event_listeners(event_type, event_value) {
+        if (!this._event_handlers.has(event_type)) {
+            return;
+        }
+        for (let event_handler of this._event_handlers.get(event_type)) {
+            event_handler(event_value);
+        }
     }
 
     initialize() {
-        g_messaging_manager.add_event_listener(MESSAGING.POPUP.UPDATE_POPUP, this._update_popup_message_callback.bind(this));
+        g_messaging_manager.add_event_listener(MESSAGING.RECEIVE.MODES_UPDATED, this._modes_updated_message_callback.bind(this));
+        g_messaging_manager.add_event_listener(MESSAGING.RECEIVE.STATISTICS_UPDATED, this._statistics_updated_message_callback.bind(this));
     }
 
     send_new_pending_mode(new_mode) {
+        g_messaging_manager.send_message({
+            action: MESSAGING.SEND.CONFIGURE_PENDING_MODE,
+            pending_mode: new_mode
+        });
+    }
+
+    reload_tab() {
+        g_messaging_manager.send_message({action: MESSAGING.SEND.RELOAD_TAB});
     }
 
     add_event_listener(event_type, event_handler) {
+        if (!this._event_handlers.has(event_type)) {
+            this._event_handlers.set(event_type, new Array());
+        }
+        this._event_handlers.get(event_type).push(event_handler);
     }
 }
 
 class InterfaceManager {
-    constructor() {
-        this._reload_dialog_visible = false;
+    _set_modes() {
+        var current_mode = g_tab_state_manager.current_mode;
+        var pending_mode = g_tab_state_manager.pending_mode;
+
+        var mode_switch_setting = MODES.UNDEFINED;
+
+        switch (pending_mode) {
+            case MODES.UNDEFINED:
+                switch (current_mode) {
+                    case MODES.UNDEFINED:
+                        break;
+                    case MODES.AUTOPLAY:
+                    case MODES.NOTHING:
+                        mode_switch_setting = current_mode;
+                        break;
+                    default:
+                        g_error_handler("Unknown mode for current mode: " + JSON.stringify(current_mode));
+                        return;
+                }
+                break;
+            case MODES.AUTOPLAY:
+            case MODES.NOTHING:
+                mode_switch_setting = pending_mode;
+                break;
+            default:
+                g_error_handler("Unknown mode for pending mode: " + JSON.stringify(pending_mode));
+                return;
+        }
+
+        document.getElementsByClassName("slide-button")[0].hidden = false;
+
+        switch (mode_switch_setting) {
+            case MODES.UNDEFINED:
+                document.getElementsByClassName("slide-button")[0].hidden = true;
+                break;
+            case MODES.AUTOPLAY:
+                document.getElementById(ELEMENTS.MODE_SETTING_AUTOPLAY_ONLY).checked = true;
+                break;
+            case MODES.NOTHING:
+                document.getElementById(ELEMENTS.MODE_SETTING_NONE).checked = true;
+                break;
+            default:
+                g_error_handler("Unknown mode for mode_switch_setting: " + JSON.stringify(mode_switch_setting));
+                return;
+        }
+
+        document.getElementById(ELEMENTS.CURRENT_MODE).textContent = MODE_NAMES[current_mode];
+
+        this._update_reload_dialog_visibility(pending_mode != MODES.UNDEFINED && current_mode != pending_mode);
     }
 
-    _set_current_mode(mode) {
-    }
+    _update_statistics(statistics) {
+        var total_count = 0;
+        var total_attempts = 0;
 
-    _set_pending_mode(mode) {
-    }
+        var div_statistics_container = document.getElementById(ELEMENTS.STATISTICS);
 
-    _set_statistics(statistics) {
+        if (Object.keys(statistics).length === 0) {
+            while (div_statistics_container.firstChild) {
+                div_statistics_container.removeChild(div_statistics_container.firstChild);
+            }
+            div_statistics_container.appendChild(document.createTextNode("(None detected)"));
+        } else if (div_statistics_container.firstChild instanceof Text) {
+            div_statistics_container.removeChild(div_statistics_container.firstChild);
+        }
+
+        for (let media_type in statistics) {
+            var container_id = "statistics-" + media_type + "-container";
+            var count_id = "statistics-" + media_type + "-count";
+            var attempts_id = "statistics-" + media_type + "-attempts";
+
+            var span_count;
+            var span_attempts;
+
+            if (document.getElementById(container_id) == null) {
+                let div_container = document.createElement("div");
+                div_container.id = container_id;
+
+                let p_title = document.createElement("p");
+                let b_title = document.createElement("b");
+                b_title.classList.add("darker-text");
+                b_title.appendChild(document.createTextNode(DELEGATE_NAMES[media_type]));
+                p_title.appendChild(b_title);
+                div_container.appendChild(p_title);
+
+                let p_count = document.createElement("p");
+                p_count.appendChild(document.createTextNode("Count: "));
+                span_count = document.createElement("span");
+                span_count.id = count_id;
+                span_count.classList.add("darker-text");
+                p_count.appendChild(span_count);
+                div_container.appendChild(p_count);
+
+                let p_attempts = document.createElement("p");
+                p_attempts.appendChild(document.createTextNode("Attempts: "));
+                span_attempts = document.createElement("span");
+                span_attempts.id = attempts_id;
+                span_attempts.classList.add("darker-text");
+                p_attempts.appendChild(span_attempts);
+                div_container.appendChild(p_attempts);
+
+                div_statistics_container.appendChild(div_container);
+            }
+
+            span_count = span_count || document.getElementById(count_id);
+            while (span_count.firstChild) {
+                span_count.removeChild(span_count.firstChild);
+            }
+            span_count.appendChild(document.createTextNode(statistics[media_type].count.toString()));
+            total_count += statistics[media_type].count;
+
+            span_attempts = span_attempts || document.getElementById(attempts_id);
+            while (span_attempts.firstChild) {
+                span_attempts.removeChild(span_attempts.firstChild);
+            }
+            span_attempts.appendChild(document.createTextNode(statistics[media_type].attempts.toString()));
+            total_attempts += statistics[media_type].attempts;
+        }
+
+        var span_media_element_count = document.getElementById(ELEMENTS.MEDIA_ELEMENT_COUNT);
+        while (span_media_element_count.firstChild) {
+            span_media_element_count.removeChild(span_media_element_count.firstChild);
+        }
+        span_media_element_count.appendChild(document.createTextNode(total_count.toString()));
+
+        var span_autoplay_attempts = document.getElementById(ELEMENTS.AUTOPLAY_ATTEMPTS);
+        while (span_autoplay_attempts.firstChild) {
+            span_autoplay_attempts.removeChild(span_autoplay_attempts.firstChild);
+        }
+        span_autoplay_attempts.appendChild(document.createTextNode(total_attempts.toString()));
     }
 
     _title_bar_interact_callback(event) {
+        event.preventDefault();
+        chrome.runtime.openOptionsPage(function() {
+            if (chrome.runtime.lastError) {
+                g_error_handler(chrome.runtime.lastError);
+            }
+        });
     }
 
     _mode_switch_interact_callback(event) {
+        var new_mode;
+        switch (event.target.id) {
+            case ELEMENTS.MODE_SETTING_AUTOPLAY_ONLY:
+                new_mode = MODES.AUTOPLAY;
+                break;
+            case ELEMENTS.MODE_SETTING_NONE:
+                new_mode = MODES.NOTHING;
+                break;
+            default:
+                g_error_handler("Unknown element id in _mode_switch_interact_callback(): " + event.target.id);
+                return;
+        }
+        g_tab_state_manager.send_new_pending_mode(new_mode);
     }
 
     _reload_dialog_interact_callback(event) {
+        event.preventDefault();
+        document.getElementById(ELEMENTS.CLICK_RELOAD).hidden = true;
+        g_tab_state_manager.reload_tab();
     }
 
     _update_reload_dialog_visibility(is_visible) {
-        this._reload_dialog_visible = is_visible;
+        document.getElementById(ELEMENTS.CLICK_RELOAD).hidden = !is_visible;
     }
 
     initialize() {
+        var manifest_details = chrome.runtime.getManifest();
+        document.getElementById(ELEMENTS.EXTENSION_NAME).appendChild(document.createTextNode(manifest_details.name));
+        document.getElementById(ELEMENTS.EXTENSION_VERSION).appendChild(document.createTextNode(manifest_details.version));
+
+        g_tab_state_manager.add_event_listener(EVENTS.TAB_STATE.MODES_UPDATED, this._set_modes.bind(this));
+        g_tab_state_manager.add_event_listener(EVENTS.TAB_STATE.STATISTICS_UPDATED, this._update_statistics.bind(this));
+
+        this._set_modes();
+        this._update_statistics(g_tab_state_manager.statistics);
+
+        for (let event_name of ["mouseup", "touchend"]) {
+            document.getElementById(ELEMENTS.CLICK_RELOAD).addEventListener(event_name, this._reload_dialog_interact_callback.bind(this));
+            document.getElementById(ELEMENTS.MAIN_HEADING).addEventListener(event_name, this._title_bar_interact_callback.bind(this));
+        };
+
+        for (let element_id of [ELEMENTS.MODE_SETTING_AUTOPLAY_ONLY, ELEMENTS.MODE_SETTING_NONE]) {
+            document.getElementById(element_id).addEventListener("change", this._mode_switch_interact_callback.bind(this));
+        }
     }
 }
 
-// Initialization
+
 
 var g_messaging_manager = new MessagingManager();
 var g_tab_state_manager = new TabStateManager();
@@ -187,7 +371,3 @@ var g_interface_manager = new InterfaceManager();
 g_tab_state_manager.initialize();
 g_interface_manager.initialize();
 g_messaging_manager.initialize();
-
-// Hide error popup
-
-document.getElementById(ELEMENTS.ERROR_POPUP).hidden = true;

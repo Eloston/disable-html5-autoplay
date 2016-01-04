@@ -4,7 +4,7 @@
         <div id="error-popup">
             <div id="error-page-overlay"></div>
             <div id="error-main-container">
-                <div id="error-main">Error encountered<br /><br /><div>Details:</div><textarea id="error-message" readonly="readonly" rows=5 style="width: 100%;">(No details)</textarea></div>
+                <div id="error-main">Error encountered<br /><br />Details are in the Developer Console</div>
             </div>
         </div>
         <div id="click-reload" hidden="hidden">Mode changes take effect on a page reload.<br /><br />Click to reload the page.</div>
@@ -30,7 +30,6 @@
             </div>
         </center>
         <p class="text-content">Currently disabling: <span id="current-mode"></span></p>
-        <div id="can-run-is-false">The extension cannot run on this page</div>
         <div class="subheading">Totals</div>
         <div class="text-content">
             <span>Media elements: <span id="media-element-count" class="darker-text"></span></span>
@@ -64,6 +63,7 @@
             }
             #error-main-container {
                 position: absolute;
+                width: 100%;
                 z-index: 200;
                 left: 50%;
                 top: 50%;
@@ -72,12 +72,14 @@
             #error-main {
                 margin: 1em 1em 1em 1em;
                 padding: 1em 1em 1em 1em;
+                white-space: normal;
                 color: #eeeeee;
                 background: #666666;
                 border-radius: 0.5em;
             }
             #click-reload {
-                position: absolute;
+                position: fixed; /* Stick to the bottom of the viewport */
+                bottom: 0;
                 z-index: 100;
                 margin: 1em 1em 1em 1em;
                 padding: 1em 1em 1em 1em;
@@ -196,10 +198,8 @@
 
                 border-radius: 0.5em;
             }
-            #mode-settings span.slide-button[disabled] {
-                background: none;
-                background-color: #cccccc;
-                border: 0.1em dashed #999999;
+            #mode-settings span.slide-button[hidden] {
+                visibility: hidden;
             }
             /* TODO: Uncomment when autobuffering is added */
             /*
