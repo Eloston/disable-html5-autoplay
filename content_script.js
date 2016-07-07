@@ -1,3 +1,12 @@
+//window.document.addEventListener("onload",
+
+runHTML5AutoplayDisable = function(){
+// begin content
+
+//alert("Test 1: "+window.location.href);
+
+
+
 function frame_script_code(m_frame_event_name) {
     function send_message(message) {
         setTimeout(function() { window.dispatchEvent(new CustomEvent(m_frame_event_name, { detail: message })); }, 0);
@@ -50,6 +59,7 @@ function frame_script_code(m_frame_event_name) {
     };
 
     function BrowserControlsDelegate(element, check_type_matches) { // Delegate that handles media with native browser controls
+    	debug_function("BrowserControlsDelegate");
         if (check_type_matches == true) {
             return (element.controls == true);
         };
@@ -94,6 +104,9 @@ function frame_script_code(m_frame_event_name) {
             });
         };
     };
+    
+    var debug_function = function(){};
+    //debug_function = alert;
 
     function YouTubeDelegate(element, check_type_matches) { // Delegate that handles YouTube media
         if (check_type_matches == true) {
@@ -125,6 +138,7 @@ function frame_script_code(m_frame_event_name) {
                 ytapi.cueVideoByPlayerVars(ytapi.getVideoData());
                 play_authorized = true;
                 last_url = window.location.href;
+                debug_function("Autoplay enabled");
             };
         };
 
@@ -135,6 +149,7 @@ function frame_script_code(m_frame_event_name) {
             play_authorized = true;
             last_url = window.location.href;
             play_pending = true;
+            debug_function("Autoplay enabled");
         };
 
         function add_user_input_listeners() {
@@ -177,6 +192,7 @@ function frame_script_code(m_frame_event_name) {
                     //play_authorized = false;
                 	if (play_authorized && window.location.href != last_url){
                 		play_authorized = false;
+                		debug_function("Autoplay disabled");
                 	}
                     add_user_input_listeners();
                     if (video_cued) {
@@ -210,11 +226,13 @@ function frame_script_code(m_frame_event_name) {
 
     function VideojsDelegate(element, check_type_matches) { // Delegate that handles Video.js media
         if (check_type_matches == true) {
+        return false;
             if (element.classList.contains("vjs-tech") == true) {
                 return element.parentElement.classList.contains("video-js") && window.hasOwnProperty("videojs");
             };
             return false;
         };
+      debug_function("Video js delegate");
 
         var self = this;
 
@@ -257,7 +275,9 @@ function frame_script_code(m_frame_event_name) {
     };
 
     function JWPlayerDelegate(element, check_type_matches) { // Delegate that handles JWPlayer media
+    	debug_function("JWPlayer delegate");
         if (check_type_matches == true) {
+            return false;
             return (element.classList.contains("jw-video") && element.parentElement.classList.contains("jw-media") && element.parentElement.parentElement.classList.contains("jwplayer") && window.hasOwnProperty("jwplayer"));
         };
 
@@ -294,6 +314,7 @@ function frame_script_code(m_frame_event_name) {
     };
 
     function UnknownDelegate(element, check_type_matches) { // Delegate that is used for any other media in the DOM
+    	debug_function("Unknown delegate");
         if (check_type_matches == true) {
             return true;
         };
@@ -501,3 +522,17 @@ function handle_message(event) {
 
 window.addEventListener("message", handle_message, false);
 window.postMessage("DisableHTML5Autoplay_Initialize", "*");
+
+
+
+
+}; // end add event listener onload
+
+
+var debug_url = "";
+if (typeof loaded == "undefined"){
+	if (typeof debug_url != "string" || debug_url == "" || debug_url == window.location.href){
+    	loaded = true;
+		runHTML5AutoplayDisable();
+    }
+}
