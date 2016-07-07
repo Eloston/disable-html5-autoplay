@@ -18,7 +18,7 @@ Head over to the [Wiki](https://github.com/Eloston/disable-html5-autoplay/wiki) 
 
 ## Installation
 
-Currently, only Chrome/Chromium and Opera are supported. Firefox will be supported when [WebExtensions](https://wiki.mozilla.org/WebExtensions) has matured enough to support all the features necessary.
+Currently, only Chrome/Chromium and Opera are supported. Firefox will be supported in the future; see [Issue #40](https://github.com/Eloston/disable-html5-autoplay/issues/40) for more details.
 
 ### Install from Chrome Webstore
 

@@ -39,10 +39,15 @@ PERMANENT_WHITELIST = [
 MESSAGING = {
     POPUP: {
         PORT_NAME: "popup",
-        INITIALIZE: "initialize",
-        UPDATE_MODERULES: "update_moderules",
-        RELOAD_TAB: "reload_tab",
-        UPDATE_POPUP: "update_popup"
+        SEND: {
+            MODES_UPDATED: "modes_updated",
+            STATISTICS_UPDATED: "statistics_updated"
+        },
+        RECEIVE: {
+            INITIALIZE: "initialize",
+            RELOAD_TAB: "reload_tab",
+            CONFIGURE_PENDING_MODE: "configure_pending_mode"
+        }
     },
     FRAME: {
         PORT_NAME: "frame"
@@ -185,22 +190,22 @@ function update_popup(tabid, reset) {
             if (g_tab_states.has(tabid)) {
                 var tab_state = g_tab_states.get(tabid);
                 map_entry[0].postMessage({
-                    action: MESSAGING.POPUP.UPDATE_POPUP,
-                    reset: reset,
-                    can_run: true,
-                    tabid: tabid,
-                    mode: tab_state.mode,
-                    pending_mode: tab_state.pending_mode,
+                    action: MESSAGING.POPUP.SEND.MODES_UPDATED,
+                    current_mode: tab_state.mode,
+                    pending_mode: tab_state.pending_mode
+                });
+                map_entry[0].postMessage({
+                    action: MESSAGING.POPUP.SEND.STATISTICS_UPDATED,
                     statistics: tab_state.media_statistics
                 });
             } else {
                 map_entry[0].postMessage({
-                    action: MESSAGING.POPUP.UPDATE_POPUP,
-                    reset: reset,
-                    can_run: false,
-                    tabid: tabid,
-                    mode: DISABLING_MODE.NOTHING,
-                    pending_mode: -1,
+                    action: MESSAGING.POPUP.SEND.MODES_UPDATED,
+                    current_mode: DISABLING_MODE.NOTHING,
+                    pending_mode: -1
+                });
+                map_entry[0].postMessage({
+                    action: MESSAGING.POPUP.SEND.STATISTICS_UPDATED,
                     statistics: new Object()
                 });
             };
@@ -336,7 +341,7 @@ chrome.runtime.onConnect.addListener(function(port) {
     } else if (port.name == MESSAGING.POPUP.PORT_NAME && !("tab" in port.sender)) {
         port.onMessage.addListener(function(message) {
             switch (message.action) {
-                case MESSAGING.POPUP.INITIALIZE:
+                case MESSAGING.POPUP.RECEIVE.INITIALIZE:
                     if (message.tabid.constructor === Number) {
                         g_popup_ports.set(port, message.tabid);
                         update_popup(message.tabid, true);
@@ -344,37 +349,37 @@ chrome.runtime.onConnect.addListener(function(port) {
                         console.error("background.js: message.tabid is not a number: " + JSON.stringify(message.tabid));
                     };
                     break;
-                case MESSAGING.POPUP.UPDATE_MODERULES:
+                case MESSAGING.POPUP.RECEIVE.CONFIGURE_PENDING_MODE:
                     var tab_id = g_popup_ports.get(port);
                     if (g_tab_states.has(tab_id)) {
                         var tab_state = g_tab_states.get(tab_id);
-                        if (message.mode == DISABLING_MODE.NOTHING || message.mode == DISABLING_MODE.AUTOPLAY || message.mode == DISABLING_MODE.AUTOBUFFER_AUTOPLAY) {
-                            if (get_mode_rule_for_domain(tab_state.domain_name).prevent_deletion == false && message.mode == get_mode_rule_for_domain(tab_state.domain_name, true).mode) {
+                        if (message.pending_mode == DISABLING_MODE.NOTHING || message.pending_mode == DISABLING_MODE.AUTOPLAY || message.pending_mode == DISABLING_MODE.AUTOBUFFER_AUTOPLAY) {
+                            if (get_mode_rule_for_domain(tab_state.domain_name).prevent_deletion == false && message.pending_mode == get_mode_rule_for_domain(tab_state.domain_name, true).mode) {
                                 g_options.mode_rules.delete(tab_state.domain_name);
                             } else if (g_options.mode_rules.has(tab_state.domain_name)) {
-                                g_options.mode_rules.get(tab_state.domain_name).mode = message.mode;
+                                g_options.mode_rules.get(tab_state.domain_name).mode = message.pending_mode;
                             } else {
                                 g_options.mode_rules.set(tab_state.domain_name, {
-                                    mode: message.mode,
+                                    mode: message.pending_mode,
                                     prevent_deletion: get_mode_rule_for_domain(tab_state.domain_name).prevent_deletion
                                 });
                             };
                             update_popups_with_pending_modes();
-                            store_mode_rule(tab_state.domain_name, message.mode);
+                            store_mode_rule(tab_state.domain_name, message.pending_mode);
                         } else {
-                            console.error("background.js: Invalid value for message.mode: " + JSON.stringify(message.mode));
+                            console.error("background.js: Invalid value for message.pending_mode: " + JSON.stringify(message.pending_mode));
                             break;
                         };
-                        if (tab_state.mode == message.mode) {
+                        if (tab_state.mode == message.pending_mode) {
                             tab_state.pending_mode = -1;
                         } else {
-                            tab_state.pending_mode = message.mode;
+                            tab_state.pending_mode = message.pending_mode;
                         };
                     } else {
                         console.error("background.js: update_whitelist: Tab state does not exist");
                     };
                     break;
-                case MESSAGING.POPUP.RELOAD_TAB:
+                case MESSAGING.POPUP.RECEIVE.RELOAD_TAB:
                     var tab_id = g_popup_ports.get(port);
                     if (g_tab_states.has(tab_id)) {
                         chrome.tabs.reload(tab_id);
