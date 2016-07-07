@@ -113,6 +113,7 @@ function frame_script_code(m_frame_event_name) {
         var ytapi = element.parentElement.parentElement;
         var init_time = -1;
         var play_authorized = false; // Whether the play() function can be invoked or not.
+        var last_url = ""; // the URL where authorized (if authorized) for dynamic applications
         var play_pending = false; // Whether we are waiting for the video to start playing or not. Set to true between the time the user input callback fires and the first play call that arrives after said callback fires.
         var video_cued = !autobuffering || yt.config_.hasOwnProperty("PLAYER_CONFIG") && yt.config_.PLAYER_CONFIG.hasOwnProperty("args") && yt.config_.PLAYER_CONFIG.args.hasOwnProperty("el") && (yt.config_.PLAYER_CONFIG.args.el == "embedded"); // Whether the video is cued (a red play button is in the center with a large video thumbnail in the background)
 
@@ -123,6 +124,7 @@ function frame_script_code(m_frame_event_name) {
                 init_time = ytapi.getCurrentTime();
                 ytapi.cueVideoByPlayerVars(ytapi.getVideoData());
                 play_authorized = true;
+                last_url = window.location.href;
             };
         };
 
@@ -131,6 +133,7 @@ function frame_script_code(m_frame_event_name) {
                 ytapi.parentElement.removeEventListener(event_name, user_input_callback, true);
             };
             play_authorized = true;
+            last_url = window.location.href;
             play_pending = true;
         };
 
@@ -171,7 +174,10 @@ function frame_script_code(m_frame_event_name) {
                         return;
                     };
                 } else if (element.src.length === 0 && !play_pending) {
-                    play_authorized = false;
+                    //play_authorized = false;
+                	if (play_authorized && window.location.href != last_url){
+                		play_authorized = false;
+                	}
                     add_user_input_listeners();
                     if (video_cued) {
                         return;
