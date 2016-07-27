@@ -10,7 +10,7 @@
 </h1>
 **An extension for Chromium-based browsers that disables HTML5 audio and video autoplaying**
 
-Disable HTML5 Autoplay does exactly what it says: disable HTML5 audio and video autoplaying.
+Disable HTML5 Autoplay disables HTML5 audio and video autoplaying.
 
 In addition to removing the HTML `autoplay` attribute from media elements, Disable HTML5 Autoplay also hooks into the media's JavaScript API. This allows for restrictions on media control and simulation of expected behavior to ensure that all pages behave normally.
 
