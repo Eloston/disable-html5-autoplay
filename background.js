@@ -1,146 +1,47 @@
 "use strict";
 
+/*********************************************************************************
+
+    Disable HTML5 Autoplay: A webbrowser extension to disable HTML5 autoplaying
+    Copyright (C) 2016  Eloston
+
+    This file is part of Disable HTML5 Autoplay.
+
+    Disable HTML5 Autoplay is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Disable HTML5 Autoplay is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Disable HTML5 Autoplay.  If not, see <http://www.gnu.org/licenses/>.
+
+********************************************************************************/
+
 function g_error_handler(value) {
     console.error(value);
 }
 
-class PopupsManager {
-    constructor() {
-        this._MESSAGING = {
-            PORT_NAME: "popup",
-            SEND: {
-                MODES_UPDATED: "modes_updated",
-                STATISTICS_UPDATED: "statistics_updated"
-            },
-            RECEIVE: {
-                INITIALIZE: "initialize",
-                RELOAD_TAB: "reload_tab",
-                CONFIGURE_PENDING_MODE: "configure_pending_mode"
-            }
-        }
-
-        this._ports_tabid_mapping = new Map();
+const PROTOCOL = {
+    PAGE_FRAME: {
+        PORT_NAME: "frame"
+    },
+    POPUP: {
+        PORT_NAME: "popup",
+        INITIALIZE: "initialize"
     }
+};
 
-    _get_port_by_tabid(tabid) {
-        for (let map_entry of this._ports_tabid_mapping) {
-            if (map_entry[1] === tabid) {
-                return map_entry[0];
-            }
-        }
-    }
-
-    _get_tabid_by_port(port) {
-        return this._ports_tabid_mapping.get(port);
-    }
-
-    _set_port_for_tabid(tabid, port) {
-        this._ports_tabid_mapping.set(port, tabid);
-    }
-
-    _runtime_onconnect_handler(port) {
-        if (port.name == this._MESSAGING.PORT_NAME && !("tab" in port.sender)) {
-            port.onMessage.addListener(this._port_onmessage_handler.bind(this, port));
-            port.onDisconnect.addListener(this._port_ondisconnect_handler.bind(this, port));
-        }
-    }
-
-    _port_onmessage_handler(port, message) {
-        switch (message.action) {
-            case this._MESSAGING.RECEIVE.INITIALIZE:
-                if (message.tabid.constructor === Number) {
-                    // Get tab object information and send modes updated and statistics updated
-                } else {
-                    g_error_handler("message.tabid is not a number. Message: " + JSON.stringify(message));
-                }
-                break;
-            case this._MESSAGING.RECEIVE.RELOAD_TAB:
-                let tab_id = this._get_tabid_by_port(port);
-                // Check if tab_id is in tab states
-                break;
-            case this._MESSAGING.RECEIVE.CONFIGURE_PENDING_MODE:
-                this.send_new_pending_modes();
-                break;
-            default:
-                g_error_handler("Unknown message.action. Message: " + JSON.stringify(message));
-        }
-    }
-
-    _port_ondisconnect_handler(port) {
-        this._ports_tabid_mapping.delete(port);
-    }
-
-    send_modes_updated(tabid, current_mode, pending_mode) {
-        this._get_port_by_tabid(tabid).postMessage({
-            action: this._MESSAGING.SEND.MODES_UPDATED,
-            current_mode: current_mode,
-            pending_mode: pending_mode
-        });
-    }
-
-    send_statistics_updated(tabid, statistics) {
-        this._get_port_by_tabid(tabid).postMessage({
-            action: this._MESSAGING.SEND.STATISTICS_UPDATED,
-            statistics: statistics
-        });
-    }
-
-    send_new_pending_modes() {
-    }
-
-    initialize() {
-        chrome.runtime.onConnect.addListener(this._runtime_onconnect_handler.bind(this));
-    }
-}
-
-class PageFramesManager {
-    constructor() {
-        this._MESSAGING = {
-            PORT_NAME: "frame"
-        }
-
-        this._ports_tabid_mapping = new Map();
-    }
-
-    _get_port_by_tabid(tabid) {
-        for (let map_entry of this._ports_tabid_mapping) {
-            if (map_entry[1] === tabid) {
-                return map_entry[0];
-            }
-        }
-    }
-
-    _get_tabid_by_port(port) {
-        return this._ports_tabid_mapping.get(port);
-    }
-
-    _set_port_for_tabid(tabid, port) {
-        this._ports_tabid_mapping.set(port, tabid);
-    }
-
-    _runtime_onconnect_handler(port) {
-        if (port.name == this._MESSAGING.PORT_NAME && ("tab" in port.sender)) {
-            port.onMessage.addListener(this._port_onmessage_handler.bind(this, port));
-            port.onDisconnect.addListener(this._port_ondisconnect_handler.bind(this, port));
-            // Add to this._ports_tabid_mapping
-        }
-    }
-
-    _port_onmessage_handler(port, message) {
-    }
-
-    _port_ondisconnect_handler(port) {
-        this._ports_tabid_mapping.delete(port);
-    }
-
-    initialize() {
-        chrome.runtime.onConnect.addListener(this._runtime_onconnect_handler.bind(this));
-    }
-}
-
-class TabManager {
-    constructor() {
-        this._tab_metadata = new Map();
+class TabInstance {
+    constructor(tabid) {
+        this._tab_id = tabid;
+        this._pageframe_port = null;
+        this._popup_port = null;
+        this._metadata = new Object(); // TODO: Initialize actual tab metadata here
     }
 
     _api_error_logging_callback() {
@@ -149,7 +50,22 @@ class TabManager {
         }
     }
 
-    _set_browser_action_icon(tabid, active) {
+    _pageframe_port_onmessage(message) {
+    }
+
+    _pageframe_port_ondisconnect() {
+        this._pageframe_port = null;
+        // TODO: Initialize tab metadata here
+    }
+
+    _popup_port_onmessage(message) {
+    }
+
+    _popup_port_ondisconnect() {
+        this._popup_port = null;
+    }
+
+    _set_browser_action_icon(active) {
         if (active) {
             var icon_set = {
                 "19": "images/active_19.png",
@@ -162,24 +78,121 @@ class TabManager {
             };
         }
         chrome.browserAction.setIcon({
-            tabId: tabid,
+            tabId: this._tab_id,
             path: icon_set
-        }, this._api_error_logging_callback);
+        }, this._api_error_logging_callback.bind(this));
     }
 
-    _set_browser_action_badge(tabid, value) {
+    _set_browser_action_badge(value) {
+        chrome.browserAction.setBadgeText({
+            tabId: this._tab_id,
+            text: value
+        });
     }
 
-    get_tab_metadata(tabid) {
+    reload_tab() {
+        chrome.tabs.reload(this._tab_id, new Object(), this._api_error_logging_callback.bind(this));
     }
 
-    reload_tab(tabid) {
+    get_current_mode() {
+    }
+
+    get_pending_mode() {
+    }
+
+    get_statistics() {
+    }
+
+    deconstruct() {
+        // TODO: Unregister event handlers and delete all links to this object (excluding TabManager)
+        // Also reset browser action back to original state?
+    }
+
+    // Move stuff using tabid from TabManager to this class
+    // Add callbacks here to listen to tabid changes
+}
+
+class TabManager {
+    constructor() {
+        // TODO: Should this change to WeakMap?
+        this._instances = new Map(); // mapping: tab id -> TabInstance
+
+        this._port_bootstrap_functions = new WeakMap();
+    }
+
+    _api_error_logging_callback() {
+        if (chrome.runtime.lastError) {
+            g_error_handler(chrome.runtime.lastError);
+        }
+    }
+
+    _popup_port_onmessage_boostrap(port, message) {
+        if (message.action = PROTOCOL.POPUP.INITIALIZE) {
+            if (message.tabid.constructor == Number) {
+                port.onMessage.removeListener(this._port_bootstrap_functions.get(port));
+                this._port_bootstrap_functions.delete(port);
+                let tab_instance = this._get_tab_instance(message.tabid);
+                port.onMessage.addListener(tab_instance._popup_port_onmessage.bind(tab_instance));
+                port.onDisconnect.addListener(tab_instance._popup_port_ondisconnect.bind(tab_instance));
+            } else {
+                // Throw error
+            }
+        } else {
+            // Throw error
+        }
+    }
+
+    _on_port_connect(port) {
+        if (port.name == PROTOCOL.PAGE_FRAME.PORT_NAME && ("tab" in port.sender)) {
+            if (port.sender.tab.id.constructor === Number) {
+                let tab_instance = this._get_tab_instance(message.tabid);
+                port.onMessage.addListener(tab_instance._pageframe_port_onmessage.bind(tab_instance));
+                port.onDisconnect.addListener(tab_instance._pageframe_port_ondisconnect.bind(tab_instance));
+            } else {
+                // Throw error
+            }
+        } else if (port.name == PROTOCOL.POPUP.PORT_NAME && !("tab" in port.sender)) {
+            let bootstrap_function = this._popup_port_onmessage_bootstrap.bind(this, port);
+            port.onMessage.addListener(bootstrap_function);
+            this._port_bootstrap_functions.set(port, bootstrap_function);
+        }
+    }
+
+    _add_tab_instance(tabid) {
+        if (this._instances.has(tabid)) {
+            // Throw error
+        } else {
+            this._instances.set(tabid, new TabInstance(tabid));
+        }
+    }
+
+    _get_tab_instance(tabid) {
+        if (!this.has_tab_instance(tabid)) {
+            // Throw error
+        }
+        return this._instances.get(tabid);
+
+    has_tab_instance(tabid) {
+        return this._instances.has(tabid);
+    }
+
+    remove_tab_instance(tabid) {
+        if (this._instances.has(tabid)) {
+            tab_instance = this._instances.get(tabid)
+            tab_instance.deconstruct();
+            this._instances.remove(tabid);
+        } else {
+            // Throw error
+        }
     }
 
     initialize() {
         chrome.browserAction.setBadgeBackgroundColor({
             color: [32, 32, 32, 200]
         });
+
+        chrome.runtime.onConnect.addListener(this._on_port_connect.bind(this));
+        // Put chrome.tabs and other event handlers here
     }
 }
 
@@ -189,8 +202,6 @@ class StorageManager {
 class OptionsManager {
 }
 
-g_popups_manager = new PopupsManager();
-g_page_frames_manager = new PageFramesManager();
 g_tab_manager = new TabManager();
 g_storage_manager = new StorageManager();
 g_options_manager = new OptionsManager();
