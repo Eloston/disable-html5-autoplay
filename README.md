@@ -34,7 +34,7 @@ Currently, only Chrome/Chromium and Opera are supported. Firefox will be support
 
 1. Download and unpack the source code:
   * [Tagged versions](https://github.com/Eloston/disable-html5-autoplay/releases)
-  * master branch source code: [.tar.gz](https://github.com/Eloston/ungoogled-chromium/archive/master.tar.gz) or [.zip](https://github.com/Eloston/ungoogled-chromium/archive/master.zip)
+  * master branch source code: [.tar.gz](https://github.com/Eloston/disable-html5-autoplay/archive/master.tar.gz) or [.zip](https://github.com/Eloston/disable-html5-autoplay/archive/master.zip)
 2. In `chrome://extensions/`, enable Developer mode
 3. Use "Load unpacked extension..." and select the folder containing the extension source code
 
