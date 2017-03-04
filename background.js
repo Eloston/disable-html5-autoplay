@@ -107,7 +107,7 @@ function parse_storage(storage_values) {
 };
 
 function store_mode_rule(domain, new_mode) {
-    chrome.storage.local.get(STORAGE_KEYS.MODE_RULES, function(storage_values) {
+    chrome.storage.sync.get(STORAGE_KEYS.MODE_RULES, function(storage_values) {
         var mode_rules_array = storage_values[STORAGE_KEYS.MODE_RULES].split(MODE_RULES_FORMAT.RULE_DELIMITER);
         for (var line_index = 0; line_index < mode_rules_array.length; line_index++) {
             var parsed_line = mode_rules_array[line_index].split(MODE_RULES_FORMAT.COMMENT_ESCAPE_REGEX)[0].split(MODE_RULES_FORMAT.VALUE_DELIMITER);
@@ -119,7 +119,7 @@ function store_mode_rule(domain, new_mode) {
                 };
                 storage_values[STORAGE_KEYS.MODE_RULES] = mode_rules_array.join(MODE_RULES_FORMAT.RULE_DELIMITER);
                 g_ignore_storage_change_event = true;
-                chrome.storage.local.set(storage_values, function() {
+                chrome.storage.sync.set(storage_values, function() {
                     chrome.runtime.lastError // TODO: Log into debug log
                 });
                 return;
@@ -134,20 +134,20 @@ function store_mode_rule(domain, new_mode) {
         mode_rules_array.push(domain + MODE_RULES_FORMAT.VALUE_DELIMITER + MODE_RULES_FORMAT.REVERSE_MODE_MAP[new_mode]);
         storage_values[STORAGE_KEYS.MODE_RULES] = mode_rules_array.join(MODE_RULES_FORMAT.RULE_DELIMITER);
         g_ignore_storage_change_event = true;
-        chrome.storage.local.set(storage_values, function() {
+        chrome.storage.sync.set(storage_values, function() {
             chrome.runtime.lastError // TODO: Log into debug log
         });
     });
 };
 
 function initialize_options() {
-    chrome.storage.local.get([STORAGE_KEYS.VERSION, STORAGE_KEYS.DEFAULT_MODE, STORAGE_KEYS.MODE_RULES], function(storage_values) {
+    chrome.storage.sync.get([STORAGE_KEYS.VERSION, STORAGE_KEYS.DEFAULT_MODE, STORAGE_KEYS.MODE_RULES], function(storage_values) {
         var storage_version = storage_values[STORAGE_KEYS.VERSION];
         if (storage_version == OPTIONS_VERSION) {
             parse_storage(storage_values);
         } else if (storage_version === undefined) {
             g_ignore_storage_change_event = true;
-            chrome.storage.local.set({
+            chrome.storage.sync.set({
                 [STORAGE_KEYS.VERSION]: OPTIONS_VERSION,
                 [STORAGE_KEYS.DEFAULT_MODE]: DISABLING_MODE.AUTOPLAY, // TODO: Change to AUTOBUFFER_AUTOPLAY
                 [STORAGE_KEYS.MODE_RULES]: ""
@@ -252,7 +252,7 @@ chrome.storage.onChanged.addListener(function(changes, areaName) {
         } else {
             console.error("background.js: chrome.storage.onChanged: The '" + STORAGE_KEYS.DEFAULT_MODE + "' key has been corrupt. Resetting all data...");
             g_ignore_storage_change_event = true;
-            chrome.storage.local.clear(function () {
+            chrome.storage.sync.clear(function () {
                 initialize_options();
             });
             return;
@@ -264,7 +264,7 @@ chrome.storage.onChanged.addListener(function(changes, areaName) {
         } else {
             console.error("background.js: chrome.storage.onChanged: The '" + STORAGE_KEYS.MODE_RULES + "' key has been corrupt. Resetting all data...");
             g_ignore_storage_change_event = true;
-            chrome.storage.local.clear(function () {
+            chrome.storage.sync.clear(function () {
                 initialize_options();
             });
             return;
