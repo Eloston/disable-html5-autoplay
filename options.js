@@ -80,7 +80,7 @@ function validate_mode_rules(raw_mode_rules) {
     return [true];
 };
 
-chrome.storage.local.get([STORAGE_KEYS.VERSION, STORAGE_KEYS.DEFAULT_MODE, STORAGE_KEYS.MODE_RULES], function(storage_values) {
+chrome.storage.sync.get([STORAGE_KEYS.VERSION, STORAGE_KEYS.DEFAULT_MODE, STORAGE_KEYS.MODE_RULES], function(storage_values) {
     if (storage_values[STORAGE_KEYS.VERSION] == OPTIONS_VERSION) {
         g_raw_mode_rules = storage_values[STORAGE_KEYS.MODE_RULES];
         var default_mode_element = document.getElementById(ELEMENTS.DEFAULT_MODE);
@@ -90,7 +90,7 @@ chrome.storage.local.get([STORAGE_KEYS.VERSION, STORAGE_KEYS.DEFAULT_MODE, STORA
             default_mode_element.setAttribute("disabled", "disabled");
             set_element_text(document.getElementById(ELEMENTS.DEFAULT_MODE_SAVING_STATUS), "Saving...");
             g_ignore_event_handler = true;
-            chrome.storage.local.set({
+            chrome.storage.sync.set({
                 [STORAGE_KEYS.DEFAULT_MODE]: parseInt(event.target.value)
             }, function() {
                 default_mode_element.removeAttribute("disabled");
@@ -134,7 +134,7 @@ chrome.storage.local.get([STORAGE_KEYS.VERSION, STORAGE_KEYS.DEFAULT_MODE, STORA
                     set_element_text(document.getElementById(ELEMENTS.SAVE_MODE_RULES_STATUS), "Saving...");
                     g_raw_mode_rules = mode_rules_element.value;
                     g_ignore_event_handler = true;
-                    chrome.storage.local.set({
+                    chrome.storage.sync.set({
                         [STORAGE_KEYS.MODE_RULES]: mode_rules_element.value
                         }, function() {
                             set_element_text(document.getElementById(ELEMENTS.SAVE_MODE_RULES_STATUS), "Saved!");
