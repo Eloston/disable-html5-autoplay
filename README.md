@@ -11,6 +11,8 @@
 
 **An extension for Chromium-based browsers that disables HTML5 audio and video autoplaying**
 
+**UPDATE**: There is now an effort to disable autoplay from the browser itself. [Please see the Chromium issue report](https://bugs.chromium.org/p/chromium/issues/detail?id=715049) and the referenced design document for more details.
+
 **NOTICE: I have stopped maintaining this project.** However, I still welcome contributions (as pull requests) to the project. I recommend [rewriting the extension as version 0.7](//github.com/Eloston/disable-html5-autoplay/issues/114) because the code in 0.6 is hard to maintain. If you still want to make changes to the 0.6 series, you can do so in the `0.6-maintenance` branch.
 
 Disable HTML5 Autoplay disables HTML5 audio and video autoplaying.
