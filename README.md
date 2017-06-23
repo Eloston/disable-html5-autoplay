@@ -11,7 +11,7 @@
 
 **An extension for Chromium-based browsers that disables HTML5 audio and video autoplaying**
 
-**NOTICE: I have stopped maintaining this project.** Please consult [NEWS.md](NEWS.md) for more details.
+### *NOTICE: I have stopped maintaining this project. Please consult [NEWS.md](NEWS.md) for more details.*
 
 Disable HTML5 Autoplay disables HTML5 audio and video autoplaying.
 
