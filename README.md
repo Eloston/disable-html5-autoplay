@@ -9,37 +9,21 @@
     Disable HTML5 Autoplay
 </h1>
 
-**An extension for Chromium-based browsers that disables HTML5 audio and video autoplaying**
-
 ### *NOTICE: I have stopped maintaining this project. Please consult [NEWS.md](NEWS.md) for more details.*
 
-Disable HTML5 Autoplay disables HTML5 audio and video autoplaying.
+### To Disable Ads In Chrome
 
-In addition to removing the HTML `autoplay` attribute from media elements, Disable HTML5 Autoplay also hooks into the media's JavaScript API. This allows for restrictions on media control and simulation of expected behavior to ensure that all pages behave normally.
+Enter `chrome://flags` in the url bar and search for "Autoplay Policy" and set it to "Document user activation is required"
 
-Please consult the [Wiki](https://github.com/Eloston/disable-html5-autoplay/wiki) for information on using the extension, solutions to common issues, getting help, and more.
+[Settings Image](https://user-images.githubusercontent.com/167818/27504657-6d0be298-585c-11e7-8209-81b272396b0b.png)
 
-## Installation
+As of Sept 25, 2017 this does not affect some major news and other websites which will still autoplay even though this
+is set.
 
-Currently, only Chrome/Chromium and Opera are supported. Firefox will be supported in the future; see [Issue #40](https://github.com/Eloston/disable-html5-autoplay/issues/40) for more details.
+### Alternative Chrome Plugins
 
-### Install from Chrome Webstore
-
-* [Webstore page](https://chrome.google.com/webstore/detail/disable-html5-autoplay/efdhoaajjjgckpbkoglidkeendpkolai)
-* [Webstore CRX download link (for advanced users)](https://clients2.google.com/service/update2/crx?prodversion=44&response=redirect&x=id%3Defdhoaajjjgckpbkoglidkeendpkolai%26uc)
-
-### Install from Opera Addons
-
-* [Opera Addons page](https://addons.opera.com/en/extensions/details/disable-html5-autoplay/)
-* [Opera Addons NEX download link (for advanced users)](https://addons.opera.com/extensions/download/disable-html5-autoplay/)
-
-### Install from source (All supported browsers)
-
-1. Download and unpack the source code:
-  * [Tagged versions](https://github.com/Eloston/disable-html5-autoplay/releases)
-  * master branch source code: [.tar.gz](https://github.com/Eloston/disable-html5-autoplay/archive/master.tar.gz) or [.zip](https://github.com/Eloston/disable-html5-autoplay/archive/master.zip)
-2. In `chrome://extensions/`, enable Developer mode
-3. Use "Load unpacked extension..." and select the folder containing the extension source code
+The [Video Autoplay Blocker](https://chrome.google.com/webstore/detail/video-autoplay-blocker-by/khhablkjeghmeinlfgecddpgcopnljpm?utm_source=chrome-app-launcher-info-dialog) can be
+used as a stopgap until Chrome itself supports better autoplay blocking (early 2018).
 
 ## License
 
