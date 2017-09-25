@@ -15,7 +15,7 @@
 
 Enter `chrome://flags` in the url bar and search for "Autoplay Policy" and set it to "Document user activation is required"
 
-[Settings Image](https://user-images.githubusercontent.com/167818/27504657-6d0be298-585c-11e7-8209-81b272396b0b.png)
+![Settings Image](https://user-images.githubusercontent.com/167818/27504657-6d0be298-585c-11e7-8209-81b272396b0b.png)
 
 As of Sept 25, 2017 this does not affect some major news and other websites which will still autoplay even though this
 is set.
